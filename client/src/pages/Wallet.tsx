@@ -137,7 +137,7 @@ export default function Wallet() {
       return response.json();
     },
     onSuccess: () => {
-      showNotification("Saved! 24h hold applied.", "success");
+      showNotification("Wallet details saved successfully!", "success");
       queryClient.invalidateQueries({ queryKey: ['/api/wallet/details'] });
     },
     onError: (error: any) => {
@@ -195,12 +195,6 @@ export default function Wallet() {
     // Check for pending withdrawal
     if (hasPendingWithdrawal) {
       showNotification("Cannot create new request until current one is processed", "error");
-      return false;
-    }
-
-    // Check for 24-hour hold
-    if (walletDetails && !walletDetails.canWithdraw) {
-      showNotification("Withdrawal on hold for 24 hours after updating wallet", "error");
       return false;
     }
 
@@ -360,7 +354,7 @@ export default function Wallet() {
             <div className="text-center">
               <div className="text-primary-foreground/80 text-xs font-medium">Balance</div>
               <div className="text-2xl font-bold text-white">
-                {Math.round(parseFloat(user?.balance || "0") * 100000)} PAD
+                {Math.round(parseFloat(user?.balance || "0") * 100000)} MGB
               </div>
               <div className="text-primary-foreground/70 text-xs">
                 ≈ ${(Math.round(parseFloat(user?.balance || "0") * 100000) / 200000).toFixed(2)} USD
@@ -407,16 +401,6 @@ export default function Wallet() {
                       value={walletForm.tonWalletComment}
                       onChange={(e) => updateWalletForm('tonWalletComment', e.target.value)}
                     />
-                  </div>
-
-                  {/* Notice */}
-                  <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <i className="fas fa-info-circle text-orange-600 dark:text-orange-400 mt-0.5"></i>
-                      <p className="text-xs text-orange-800 dark:text-orange-300">
-                        After changing the payment details, the possibility of withdrawal is put on hold for 24 hours.
-                      </p>
-                    </div>
                   </div>
 
                   {/* Save Button */}
@@ -554,17 +538,6 @@ export default function Wallet() {
                   )}
 
                   {/* Warning Messages */}
-                  {walletDetails && !walletDetails.canWithdraw && (
-                    <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        <i className="fas fa-clock text-orange-600 dark:text-orange-400 mt-0.5"></i>
-                        <p className="text-xs text-orange-800 dark:text-orange-300">
-                          Withdrawal is on hold for 24 hours after updating wallet details.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
                   {hasPendingWithdrawal && (
                     <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                       <div className="flex items-start gap-2">
@@ -584,7 +557,6 @@ export default function Wallet() {
                       withdrawMutation.isPending || 
                       !user?.balance || 
                       parseFloat(user?.balance || '0') < 0.001 ||
-                      (walletDetails && !walletDetails.canWithdraw) ||
                       hasPendingWithdrawal
                     }
                   >
@@ -670,7 +642,7 @@ export default function Wallet() {
                             }`}></div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
-                                <span className="font-semibold text-sm text-foreground">{Math.round(parseFloat(withdrawal.amount) * 100000)} PAD</span>
+                                <span className="font-semibold text-sm text-foreground">{Math.round(parseFloat(withdrawal.amount) * 100000)} MGB</span>
                                 <span className={`text-xs font-medium ${getStatusTextColor(withdrawal.status)}`}>
                                   {getStatusLabel(withdrawal.status)}
                                 </span>

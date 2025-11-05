@@ -6,6 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import React from "react";
+import PromoCodeInput from "@/components/PromoCodeInput";
+import { PlusCircle } from "lucide-react";
+import { useLocation } from "wouter";
 
 // Type definition for user object
 interface User {
@@ -18,6 +21,7 @@ interface User {
 
 export default function Home() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const { user, isLoading, authenticateWithTelegramWebApp, isTelegramAuthenticating, telegramAuthError } = useAuth();
 
   const { data: stats, isLoading: statsLoading } = useQuery<{
@@ -118,7 +122,9 @@ export default function Home() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-400">On referrals:</span>
-              <span className="font-semibold text-white">—</span>
+              <span className="font-semibold text-white">
+                {statsLoading ? "..." : stats?.referralEarnings || "0.00"}
+              </span>
             </div>
           </div>
           
@@ -144,6 +150,30 @@ export default function Home() {
         {/* Watch Ads Section */}
         <AdWatchingSection user={user as User} />
 
+        {/* Promo Code Section */}
+        <Card className="mt-3 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-[#4cd3ff]/20 rounded-xl p-4 shadow-lg">
+          <h3 className="text-sm font-semibold text-white mb-3">🎟️ Have a Promo Code?</h3>
+          <PromoCodeInput />
+        </Card>
+
+        {/* Create Task Button */}
+        <Card className="mt-3 bg-gradient-to-br from-blue-900/40 to-purple-900/40 border-purple-500/30 rounded-xl shadow-lg">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <h3 className="text-base font-semibold text-white mb-2">
+                Create Your Own Task
+              </h3>
+              <Button
+                onClick={() => navigate('/create-task')}
+                className="w-full bg-[#4cd3ff] hover:bg-[#6ddeff] text-black font-semibold rounded-lg transition-all active:scale-[0.97] shadow-[0_0_20px_rgba(76,211,255,0.4)]"
+              >
+                <PlusCircle className="w-5 h-5 mr-2" />
+                Create Task
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Network Chat Section */}
         <Card className="mt-3 bg-gradient-to-br from-blue-900/40 to-purple-900/40 border-purple-500/30 rounded-xl shadow-lg">
           <CardContent className="p-4">
@@ -164,40 +194,6 @@ export default function Home() {
                 <i className="fas fa-comments mr-2"></i>
                 Go to chat
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Basic Rules Section */}
-        <Card className="mt-3 bg-gradient-to-br from-blue-900/40 to-purple-900/40 border-purple-500/30 rounded-xl shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 mt-0.5">
-                <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                  <span className="text-yellow-500 text-lg">⚠️</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-base font-bold text-white mb-2.5">📜 Basic Rules</h3>
-                <ul className="space-y-1.5 text-sm text-gray-200">
-                  <li className="flex items-start gap-1.5">
-                    <span className="text-red-400 mt-0.5">•</span>
-                    <span>It is forbidden to use VPN, proxy, or any tools that hide your real IP.</span>
-                  </li>
-                  <li className="flex items-start gap-1.5">
-                    <span className="text-red-400 mt-0.5">•</span>
-                    <span>Using automated systems, bots, or emulators is strictly prohibited.</span>
-                  </li>
-                  <li className="flex items-start gap-1.5">
-                    <span className="text-red-400 mt-0.5">•</span>
-                    <span>All activity must come from real devices.</span>
-                  </li>
-                  <li className="flex items-start gap-1.5">
-                    <span className="text-red-400 mt-0.5">•</span>
-                    <span>Detected use of virtual servers or fake activity will result in permanent account suspension.</span>
-                  </li>
-                </ul>
-              </div>
             </div>
           </CardContent>
         </Card>
