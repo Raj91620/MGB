@@ -274,11 +274,6 @@ export default function CreateTask() {
       return;
     }
 
-    if (taskType === "channel" && !isVerified) {
-      showNotification("Please verify your channel first", "error");
-      return;
-    }
-
     createTaskMutation.mutate();
   };
 

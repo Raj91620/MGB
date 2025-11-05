@@ -74,7 +74,7 @@ export default function Wallet() {
   
   // Withdraw form
   const [withdrawForm, setWithdrawForm] = useState<WithdrawForm>({
-    paymentSystem: 'ton_coin',
+    paymentSystem: 'mgb_wallet',
     amount: '',
     paymentDetails: '',
     comment: ''
@@ -111,24 +111,16 @@ export default function Wallet() {
     }
   }, [walletDetails]);
 
-  // Auto-fill payment details when payment system or wallet details change
+  // Auto-fill TON wallet address
   useEffect(() => {
-    if (walletDetails && withdrawForm.paymentSystem) {
-      if (withdrawForm.paymentSystem === 'ton_coin') {
-        setWithdrawForm(prev => ({
-          ...prev,
-          paymentDetails: walletDetails.tonWalletAddress || '',
-          comment: walletDetails.tonWalletComment || ''
-        }));
-      } else if (withdrawForm.paymentSystem === 'telegram_premium' || withdrawForm.paymentSystem === 'telegram_stars') {
-        setWithdrawForm(prev => ({
-          ...prev,
-          paymentDetails: walletDetails.telegramUsername || '',
-          comment: ''
-        }));
-      }
+    if (walletDetails) {
+      setWithdrawForm(prev => ({
+        ...prev,
+        paymentDetails: walletDetails.tonWalletAddress || '',
+        comment: walletDetails.tonWalletComment || ''
+      }));
     }
-  }, [withdrawForm.paymentSystem, walletDetails]);
+  }, [walletDetails]);
 
   // Save wallet details mutation
   const saveWalletMutation = useMutation({
@@ -190,7 +182,7 @@ export default function Wallet() {
 
   const validateWithdrawForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    const amount = parseFloat(withdrawForm.amount);
+    const amountMGB = parseFloat(withdrawForm.amount);
 
     // Check for pending withdrawal
     if (hasPendingWithdrawal) {
@@ -198,20 +190,15 @@ export default function Wallet() {
       return false;
     }
 
-    if (!selectedPaymentSystem) {
-      newErrors.paymentSystem = 'Please select a payment system';
-    } else {
-      if (!withdrawForm.amount || amount <= 0) {
-        newErrors.amount = 'Please enter a valid amount';
-      } else if (amount < selectedPaymentSystem.minWithdrawal) {
-        newErrors.amount = `Minimum withdrawal is ${selectedPaymentSystem.minWithdrawal} ${selectedPaymentSystem.name === 'TON Coin' ? 'TON' : 'USD'}`;
-      } else if (amount > parseFloat(user?.balance || '0')) {
-        newErrors.amount = 'Insufficient balance';
-      }
+    if (!withdrawForm.amount || amountMGB <= 0) {
+      newErrors.amount = 'Please enter a valid amount';
+    } else if (amountMGB > parseFloat(user?.balance || '0')) {
+      newErrors.amount = 'Insufficient balance';
     }
 
     if (!withdrawForm.paymentDetails.trim()) {
-      newErrors.paymentDetails = 'Payment details are required';
+      showNotification("Please set up your TON wallet address first", "error");
+      return false;
     }
 
     setErrors(newErrors);
@@ -231,7 +218,7 @@ export default function Wallet() {
     onSuccess: () => {
       showNotification("💸 Withdrawal request submitted!", "success");
       setWithdrawForm({
-        paymentSystem: 'ton_coin',
+        paymentSystem: 'mgb_wallet',
         amount: '',
         paymentDetails: walletDetails?.tonWalletAddress || '',
         comment: walletDetails?.tonWalletComment || ''
@@ -354,10 +341,10 @@ export default function Wallet() {
             <div className="text-center">
               <div className="text-primary-foreground/80 text-xs font-medium">Balance</div>
               <div className="text-2xl font-bold text-white">
-                {Math.round(parseFloat(user?.balance || "0") * 100000)} MGB
+                {Math.round(parseFloat(user?.balance || "0") * 500000)} MGB
               </div>
               <div className="text-primary-foreground/70 text-xs">
-                ≈ ${(Math.round(parseFloat(user?.balance || "0") * 100000) / 200000).toFixed(2)} USD
+                ≈ {(parseFloat(user?.balance || "0")).toFixed(4)} TON
               </div>
             </div>
           </div>
@@ -431,111 +418,44 @@ export default function Wallet() {
             <Card className="neon-glow-border shadow-lg">
               <CardHeader className="py-3">
                 <CardTitle className="text-base font-medium">Withdraw funds</CardTitle>
-                <CardDescription className="text-xs">Choose the payment system</CardDescription>
+                <CardDescription className="text-xs">Enter amount to withdraw to your TON wallet</CardDescription>
               </CardHeader>
               
-              <CardContent className="p-3 pt-2">
-                <form onSubmit={handleSubmitWithdraw} className="space-y-3">
-                  {/* Payment System Selector */}
+              <CardContent className="p-4 pt-2">
+                <form onSubmit={handleSubmitWithdraw} className="space-y-4">
+                  {/* Amount Input */}
                   <div className="space-y-2">
-                    <Label>Payment System</Label>
-                    <Select 
-                      value={withdrawForm.paymentSystem} 
-                      onValueChange={(value) => updateWithdrawForm('paymentSystem', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select payment system" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PAYMENT_SYSTEMS.map(ps => (
-                          <SelectItem key={ps.id} value={ps.id}>
-                            {ps.emoji} {ps.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.paymentSystem && <p className="text-sm text-red-500">{errors.paymentSystem}</p>}
-                  </div>
-
-                  {/* Wallet Input - Auto-filled */}
-                  <div className="space-y-2">
-                    <Label>Wallet Address</Label>
-                    <Input
-                      value={withdrawForm.paymentDetails}
-                      onChange={(e) => updateWithdrawForm('paymentDetails', e.target.value)}
-                      placeholder="Payment details"
-                      className={errors.paymentDetails ? 'border-red-500' : ''}
-                      readOnly={!!walletDetails && withdrawForm.paymentDetails !== ''}
-                    />
-                    {errors.paymentDetails && <p className="text-sm text-red-500">{errors.paymentDetails}</p>}
-                    <p className="text-xs text-muted-foreground">
-                      Automatically filled from saved wallet
-                    </p>
-                  </div>
-
-                  {/* Payout Amount */}
-                  <div className="space-y-2">
-                    <Label>Payout Amount</Label>
+                    <Label htmlFor="withdraw-amount" className="text-sm font-medium">Enter amount to withdraw</Label>
                     <div className="relative">
                       <Input
+                        id="withdraw-amount"
                         type="number"
                         step="0.00001"
-                        min={selectedPaymentSystem?.minWithdrawal || 0}
+                        min="0"
                         max={autoRoundAmount(user?.balance || "0")}
                         value={withdrawForm.amount}
                         onChange={(e) => updateWithdrawForm('amount', e.target.value)}
-                        placeholder="Enter amount"
-                        className={errors.amount ? 'border-red-500' : ''}
+                        placeholder="0.00"
+                        className={`text-lg h-12 pr-16 ${errors.amount ? 'border-red-500' : ''}`}
                       />
                       <Button 
                         type="button"
                         size="sm"
                         variant="ghost"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 px-2 text-xs"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-3 text-xs font-semibold"
                         onClick={() => updateWithdrawForm('amount', autoRoundAmount(user?.balance || '0'))}
                       >
                         MAX
                       </Button>
                     </div>
                     {errors.amount && <p className="text-sm text-red-500">{errors.amount}</p>}
-                    {selectedPaymentSystem && (
-                      <p className="text-xs text-muted-foreground">
-                        Minimum: {selectedPaymentSystem.minWithdrawal} {selectedPaymentSystem.name === 'TON Coin' ? 'TON' : 'USD'}
-                      </p>
-                    )}
+                    
+                    {/* Balance preview with TON conversion */}
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <div>Balance: {Math.round(parseFloat(user?.balance || "0") * 500000)} MGB ≈ {(parseFloat(user?.balance || "0")).toFixed(4)} TON</div>
+                      <div className="text-[11px]">Conversion: 500,000 MGB = 1 TON</div>
+                    </div>
                   </div>
-
-                  {/* Fee Display */}
-                  {selectedPaymentSystem && withdrawForm.amount && parseFloat(withdrawForm.amount) > 0 && (
-                    <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Fee:</span>
-                        <span className="font-medium">
-                          {selectedPaymentSystem.feeType === 'percentage' 
-                            ? `${selectedPaymentSystem.fee}% (${fee.toFixed(4)})`
-                            : `${selectedPaymentSystem.fee} ${selectedPaymentSystem.name === 'TON Coin' ? 'TON' : 'USD'}`
-                          }
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Will be credited to wallet:</span>
-                        <span className="font-semibold text-primary">{afterFee.toFixed(4)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Comment (Optional) */}
-                  {withdrawForm.paymentSystem === 'ton_coin' && (
-                    <div className="space-y-2">
-                      <Label>Comment (Optional)</Label>
-                      <Input
-                        value={withdrawForm.comment || ''}
-                        onChange={(e) => updateWithdrawForm('comment', e.target.value)}
-                        placeholder="Optional comment"
-                        maxLength={200}
-                      />
-                    </div>
-                  )}
 
                   {/* Warning Messages */}
                   {hasPendingWithdrawal && (
@@ -552,60 +472,27 @@ export default function Wallet() {
                   {/* Submit Button */}
                   <Button 
                     type="submit" 
-                    className="w-full"
+                    className="w-full h-12 text-base font-semibold"
                     disabled={
                       withdrawMutation.isPending || 
                       !user?.balance || 
-                      parseFloat(user?.balance || '0') < 0.001 ||
+                      parseFloat(user?.balance || '0') <= 0 ||
                       hasPendingWithdrawal
                     }
                   >
                     {withdrawMutation.isPending ? (
                       <>
                         <i className="fas fa-spinner fa-spin mr-2"></i>
-                        Submitting...
+                        Processing...
                       </>
                     ) : (
                       <>
-                        <i className="fas fa-paper-plane mr-2"></i>
-                        Submit Withdrawal Request
+                        <i className="fas fa-arrow-down mr-2"></i>
+                        Withdraw
                       </>
                     )}
                   </Button>
                 </form>
-              </CardContent>
-            </Card>
-
-            {/* Minimum Withdrawal & Fees Table */}
-            <Card className="neon-glow-border shadow-lg">
-              <CardHeader className="py-3">
-                <CardTitle className="text-sm font-medium">Minimum Withdrawal & Fees</CardTitle>
-              </CardHeader>
-              <CardContent className="p-3">
-                <div className="space-y-2">
-                  {PAYMENT_SYSTEMS.map(ps => (
-                    <div key={ps.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{ps.emoji}</span>
-                        <div>
-                          <div className="text-sm font-medium">{ps.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            Min: {ps.minWithdrawal} {ps.name === 'TON Coin' ? 'TON' : 'USD'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">
-                          {ps.feeType === 'percentage' ? `${ps.fee}%` : `${ps.fee} ${ps.name === 'TON Coin' ? 'TON' : 'USD'}`}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Fee</div>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="text-xs text-muted-foreground pt-2">
-                    Note: 1⭐ = $0.02
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>

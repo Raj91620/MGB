@@ -117,7 +117,7 @@ export default function Home() {
             <div className="flex justify-between items-center">
               <span className="text-gray-400">All time:</span>
               <span className="font-semibold text-white">
-                {statsLoading ? "..." : (parseFloat((user as User)?.balance || "0") * 100000).toFixed(2)}
+                {statsLoading ? "..." : Math.round(parseFloat((user as User)?.balance || "0") * 500000)}
               </span>
             </div>
             <div className="flex justify-between items-center">
