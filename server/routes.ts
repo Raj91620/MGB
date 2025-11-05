@@ -719,12 +719,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // The ad was watched, so we should acknowledge it
       }
       
-      // Get updated balance (with fallback)
+      // Get updated user data from DB after reward logic to ensure accurate counts
       let updatedUser = await storage.getUser(userId);
       if (!updatedUser) {
         updatedUser = user; // Fallback to original user data
       }
-      const newAdsWatched = updatedUser?.adsWatchedToday || (adsWatchedToday + 1);
+      
+      // FIX BUG #1: Pull counts directly from DB, not local variables
+      const newAdsWatchedToday = updatedUser?.adsWatchedToday || 0;
+      const totalAdsWatched = updatedUser?.adsWatched || 0;
       
       // Send real-time update to user (non-blocking)
       try {
@@ -744,7 +747,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         rewardPAD: adRewardPAD,
         newBalance: updatedUser?.balance || user.balance || "0",
-        adsWatchedToday: newAdsWatched
+        adsWatchedToday: newAdsWatchedToday,
+        adsWatched: totalAdsWatched
       });
     } catch (error) {
       console.error("❌ Unexpected error in ad watch endpoint:", error);
@@ -3835,6 +3839,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error('Please set up your TON wallet address first.');
         }
 
+        // FIX BUG #5: Validate TON wallet address format (UQ or EQ prefix, 48 chars total)
+        const tonWalletRegex = /^(UQ|EQ)[A-Za-z0-9_-]{46}$/;
+        // Guard against undefined walletToUse before calling trim
+        const walletAddress = walletToUse ? walletToUse.trim() : '';
+        if (!tonWalletRegex.test(walletAddress)) {
+          throw new Error('Invalid TON wallet address format. Please enter a valid TON address starting with UQ or EQ.');
+        }
+
         const currentTonBalance = parseFloat(user.tonBalance || '0');
         const withdrawAmount = parseFloat(amount || '0');
         
@@ -3954,6 +3966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
+      // FIX BUG #6: Improve error handling and logging
       console.error('❌ Error creating withdrawal request:', error);
       console.error('❌ Error details:', error instanceof Error ? error.message : String(error));
       console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
@@ -3961,21 +3974,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create withdrawal request';
       
       // Return 400 for validation errors, 500 for others
-      if (errorMessage === 'Insufficient TON balance' || 
-          errorMessage === 'User not found' ||
-          errorMessage === 'No TON wallet address found. Please set up your TON wallet address first.' ||
-          errorMessage === 'You need to invite at least 3 friends to unlock withdrawals.' ||
-          errorMessage === 'This TON wallet address is already in use by another user. Please use a unique TON wallet address.' ||
-          errorMessage === 'Cannot create new request until current one is processed') {
+      const validationErrors = [
+        'Insufficient TON balance',
+        'Insufficient balance for this withdrawal',
+        'User not found',
+        'Please set up your TON wallet address first',
+        'Invalid TON wallet address format',
+        'Please enter a valid withdrawal amount',
+        'Minimum withdrawal amount is',
+        'Cannot create new request until current one is processed',
+        'Account is banned',
+        'Withdrawal blocked - multiple accounts detected',
+        'This TON wallet address is already in use',
+        'already linked to another account',
+        'You need to invite at least',
+        'invite',
+        'friends to unlock withdrawals'
+      ];
+      
+      const isValidationError = validationErrors.some(ve => errorMessage.includes(ve));
+      
+      if (isValidationError) {
         return res.status(400).json({ 
           success: false, 
           message: errorMessage
         });
       }
       
+      // For unexpected errors, return detailed message in development, generic in production
       res.status(500).json({ 
         success: false, 
-        message: 'Failed to create withdrawal request' 
+        message: process.env.NODE_ENV === 'development' 
+          ? `Failed to create withdrawal request: ${errorMessage}`
+          : 'Failed to create withdrawal request. Please try again or contact support.'
       });
     }
   });
@@ -4730,22 +4761,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.usePromoCode(code.trim().toUpperCase(), userId);
       
       if (result.success) {
-        // All promo codes reward TON directly (no PDZ or MGB)
         const rewardAmount = result.reward;
         
-        // Add TON balance (adds to balance field which is in TON)
+        // FIX BUG #2: Add promo code reward to pdzBalance (used for task creation), not withdraw balance
+        // Convert TON to PDZ (1 TON = 10,000,000 PDZ)
+        const pdzReward = (parseFloat(rewardAmount || '0') * 10000000).toFixed(8);
+        
+        // Update pdzBalance directly
+        const [user] = await db.select().from(users).where(eq(users.id, userId));
+        const currentPdzBalance = parseFloat(user?.pdzBalance || '0');
+        const newPdzBalance = (currentPdzBalance + parseFloat(pdzReward)).toFixed(8);
+        
+        await db.update(users)
+          .set({ pdzBalance: newPdzBalance })
+          .where(eq(users.id, userId));
+        
+        // Log the transaction
         await storage.addEarning({
           userId,
           amount: rewardAmount,
           source: 'promo_code',
-          description: `Promo code reward: ${code}`,
+          description: `Promo code reward: ${code} (added to PDZ balance for task creation)`,
         });
         
         res.json({ 
           success: true, 
-          message: `${rewardAmount} TON added to your balance!`,
-          reward: rewardAmount,
-          rewardType: 'TON'
+          message: `${pdzReward} PDZ added to your task balance!`,
+          reward: pdzReward,
+          rewardType: 'PDZ',
+          showAd: true  // FIX BUG #3: Signal frontend to show ad popup after promo claim
         });
       } else {
         res.status(400).json({ 
