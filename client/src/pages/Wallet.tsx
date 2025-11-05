@@ -181,7 +181,6 @@ export default function Wallet() {
   const validateWithdrawForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     const amountTON = parseFloat(withdrawForm.amount);
-    const minimumWithdrawal = appSettings?.minimumWithdrawal || 0.5;
 
     // Check for pending withdrawal
     if (hasPendingWithdrawal) {
@@ -191,10 +190,6 @@ export default function Wallet() {
 
     if (!withdrawForm.amount || amountTON <= 0) {
       newErrors.amount = 'Please enter a valid amount';
-    } else if (amountTON < minimumWithdrawal) {
-      newErrors.amount = `Minimum withdrawal is ${minimumWithdrawal} TON`;
-      showNotification(`Minimum withdrawal amount is ${minimumWithdrawal} TON`, "error");
-      return false;
     } else if (amountTON > parseFloat(user?.balance || '0')) {
       newErrors.amount = 'Insufficient balance';
     }
@@ -259,10 +254,11 @@ export default function Wallet() {
   };
 
   const getStatusTextColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'paid':
-      case 'Approved':
-      case 'Successfull':
+      case 'approved':
+      case 'successful':
+      case 'successfull':
         return 'text-green-600';
       case 'pending':
         return 'text-orange-600';
@@ -274,17 +270,18 @@ export default function Wallet() {
   };
 
   const getStatusLabel = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'paid':
-      case 'Approved':
-      case 'Successfull':
-        return 'Successful';
+      case 'approved':
+      case 'successful':
+      case 'successfull':
+        return '✅ Approved';
       case 'pending':
-        return 'Pending';
+        return '⏳ Pending';
       case 'rejected':
-        return 'Rejected';
+        return '❌ Rejected';
       default:
-        return 'Unknown';
+        return status;
     }
   };
 
