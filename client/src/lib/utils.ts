@@ -1,58 +1,58 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { PAD_TO_USD, tonToPAD, padToUSD } from "@shared/constants"
+import { MGB_TO_USD, tonToMGB, mgbToUSD } from "@shared/constants"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 /**
- * Format currency values - converts TON to PAD
- * Examples: 0.00033 → "33 PAD", 0.0002 → "20 PAD"
+ * Format currency values - converts TON to MGB
+ * Examples: 0.00033 → "33 MGB", 0.0002 → "20 MGB"
  */
 export function formatCurrency(value: string | number, includeSymbol: boolean = true): string {
   const numValue = parseFloat(typeof value === 'string' ? value : value.toString());
   
   if (isNaN(numValue)) {
-    return includeSymbol ? '0 PAD' : '0';
+    return includeSymbol ? '0 MGB' : '0';
   }
   
-  // Convert TON to PAD using shared constant
-  const padValue = tonToPAD(numValue);
+  // Convert TON to MGB using shared constant
+  const mgbValue = tonToMGB(numValue);
   
-  const symbol = includeSymbol ? ' PAD' : '';
-  return `${padValue.toLocaleString()}${symbol}`;
+  const symbol = includeSymbol ? ' MGB' : '';
+  return `${mgbValue.toLocaleString()}${symbol}`;
 }
 
 /**
- * Format task rewards - converts TON to PAD
- * Examples: 0.00033 → "33 PAD", 0.0002 → "20 PAD"
+ * Format task rewards - converts TON to MGB
+ * Examples: 0.00033 → "33 MGB", 0.0002 → "20 MGB"
  */
 export function formatTaskReward(value: string | number, includeSymbol: boolean = true): string {
   const numValue = parseFloat(typeof value === 'string' ? value : value.toString());
   
   if (isNaN(numValue)) {
-    return includeSymbol ? '0 PAD' : '0';
+    return includeSymbol ? '0 MGB' : '0';
   }
   
-  // Convert TON to PAD using shared constant
-  const padValue = tonToPAD(numValue);
+  // Convert TON to MGB using shared constant
+  const mgbValue = tonToMGB(numValue);
   
-  const symbol = includeSymbol ? ' PAD' : '';
-  return `${padValue.toLocaleString()}${symbol}`;
+  const symbol = includeSymbol ? ' MGB' : '';
+  return `${mgbValue.toLocaleString()}${symbol}`;
 }
 
 /**
- * Convert PAD to USD
- * 100,000 PAD = $1.00
+ * Convert MGB to USD
+ * 100,000 MGB = $1.00
  */
-export function formatPADtoUSD(padAmount: number | string): string {
-  const usd = padToUSD(padAmount);
+export function formatMGBtoUSD(mgbAmount: number | string): string {
+  const usd = mgbToUSD(mgbAmount);
   return usd.toFixed(2);
 }
 
 /**
- * Format TON values without converting to PAD
+ * Format TON values without converting to MGB
  * For admin panel and withdrawal displays
  * Examples: 0.0003 → "0.0003 TON", 1.5 → "1.5 TON"
  */
