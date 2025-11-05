@@ -673,10 +673,10 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    // Random reward between 200-1000 PAD
-    // 1 TON = 10,000,000 PAD, so we convert PAD to TON
-    const randomPAD = Math.floor(Math.random() * (1000 - 200 + 1)) + 200;
-    const rewardInTON = randomPAD / 10000000;
+    // Random reward between 200-1000 MGB (displayed as MGB to users)
+    // 1 TON = 10,000,000 MGB, so we convert MGB to TON
+    const randomMGB = Math.floor(Math.random() * (1000 - 200 + 1)) + 200;
+    const rewardInTON = randomMGB / 10000000;
     rewardEarned = rewardInTON.toFixed(8);
 
     await db
@@ -2124,7 +2124,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // ===== PDZ BALANCE MANAGEMENT =====
+  // ===== DEPRECATED: PDZ BALANCE MANAGEMENT =====
+  // NOTE: PDZ balance is deprecated. Use tonBalance instead.
+  // These functions remain for backward compatibility only.
   
   async getPDZBalance(userId: string): Promise<string> {
     try {

@@ -4763,17 +4763,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (result.success) {
         const rewardAmount = result.reward;
         
-        // FIX BUG #2: Add promo code reward to pdzBalance (used for task creation), not withdraw balance
-        // Convert TON to PDZ (1 TON = 10,000,000 PDZ)
-        const pdzReward = (parseFloat(rewardAmount || '0') * 10000000).toFixed(8);
+        // Add promo code reward to tonBalance (used for both task creation and withdrawals)
+        const tonReward = parseFloat(rewardAmount || '0');
         
-        // Update pdzBalance directly
+        // Update tonBalance directly
         const [user] = await db.select().from(users).where(eq(users.id, userId));
-        const currentPdzBalance = parseFloat(user?.pdzBalance || '0');
-        const newPdzBalance = (currentPdzBalance + parseFloat(pdzReward)).toFixed(8);
+        const currentTonBalance = parseFloat(user?.tonBalance || '0');
+        const newTonBalance = (currentTonBalance + tonReward).toFixed(8);
         
         await db.update(users)
-          .set({ pdzBalance: newPdzBalance })
+          .set({ tonBalance: newTonBalance })
           .where(eq(users.id, userId));
         
         // Log the transaction
@@ -4781,15 +4780,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           amount: rewardAmount,
           source: 'promo_code',
-          description: `Promo code reward: ${code} (added to PDZ balance for task creation)`,
+          description: `Promo code reward: ${code} (added to TON balance)`,
         });
         
         res.json({ 
           success: true, 
-          message: `${pdzReward} PDZ added to your task balance!`,
-          reward: pdzReward,
-          rewardType: 'PDZ',
-          showAd: true  // FIX BUG #3: Signal frontend to show ad popup after promo claim
+          message: `${tonReward} TON added to your balance!`,
+          reward: tonReward,
+          rewardType: 'TON',
+          showAd: false  // Don't show ad popup after promo claim to prevent navigation issues
         });
       } else {
         res.status(400).json({ 
