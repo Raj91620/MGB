@@ -1,6 +1,6 @@
 export const APP_VERSION = "1.0.0";
-export const PAD_TO_TON = 10000000; // ✅ 10,000,000 PAD = 1 TON
-export const PAD_TO_USD = 100000; // Legacy: kept for compatibility
+export const MGB_TO_TON = 10000000; // ✅ 10,000,000 MGB = 1 TON
+export const MGB_TO_USD = 100000; // Legacy: kept for compatibility
 export const APP_COLORS = {
   primary: "#4aa8ff", // light blue
   background: "#000000", // pure black
@@ -8,33 +8,33 @@ export const APP_COLORS = {
 };
 
 /**
- * Convert TON to PAD
+ * Convert TON to MGB
  * @param tonAmount - Amount in TON (string or number)
- * @returns Amount in PAD (TON * 10,000,000)
+ * @returns Amount in MGB (TON * 10,000,000)
  */
-export function tonToPAD(tonAmount: number | string): number {
+export function tonToMGB(tonAmount: number | string): number {
   const numValue = typeof tonAmount === 'string' ? parseFloat(tonAmount) : tonAmount;
-  return Math.round(numValue * PAD_TO_TON);
+  return Math.round(numValue * MGB_TO_TON);
 }
 
 /**
- * Convert PAD to TON
- * @param padAmount - Amount in PAD
- * @returns Amount in TON (PAD / 10,000,000)
+ * Convert MGB to TON
+ * @param mgbAmount - Amount in MGB
+ * @returns Amount in TON (MGB / 10,000,000)
  */
-export function padToTON(padAmount: number | string): number {
-  const numValue = typeof padAmount === 'string' ? parseFloat(padAmount) : padAmount;
-  return numValue / PAD_TO_TON;
+export function mgbToTON(mgbAmount: number | string): number {
+  const numValue = typeof mgbAmount === 'string' ? parseFloat(mgbAmount) : mgbAmount;
+  return numValue / MGB_TO_TON;
 }
 
 /**
- * Legacy function - Convert PAD to USD (kept for compatibility)
- * @param padAmount - Amount in PAD
- * @returns Amount in USD (PAD / 100,000)
+ * Legacy function - Convert MGB to USD (kept for compatibility)
+ * @param mgbAmount - Amount in MGB
+ * @returns Amount in USD (MGB / 100,000)
  */
-export function padToUSD(padAmount: number | string): number {
-  const numValue = typeof padAmount === 'string' ? parseFloat(padAmount) : padAmount;
-  return numValue / PAD_TO_USD;
+export function mgbToUSD(mgbAmount: number | string): number {
+  const numValue = typeof mgbAmount === 'string' ? parseFloat(mgbAmount) : mgbAmount;
+  return numValue / MGB_TO_USD;
 }
 
 /**
