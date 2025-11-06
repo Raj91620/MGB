@@ -8,7 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import React from "react";
 import PromoCodeInput from "@/components/PromoCodeInput";
 import { PlusCircle } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
+import { useAdmin } from "@/hooks/useAdmin";
 
 // Type definition for user object
 interface User {
@@ -23,14 +24,7 @@ export default function Home() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const { user, isLoading, authenticateWithTelegramWebApp, isTelegramAuthenticating, telegramAuthError } = useAuth();
-
-  const { data: stats, isLoading: statsLoading } = useQuery<{
-    todayEarnings?: string;
-    referralEarnings?: string;
-  }>({
-    queryKey: ["/api/user/stats"],
-    retry: false,
-  });
+  const { isAdmin } = useAdmin();
 
   const { data: tasksData } = useQuery<{
     tasks?: Array<{ claimed: boolean; [key: string]: any }>;
@@ -109,48 +103,58 @@ export default function Home() {
           </div>
         )}
 
-        {/* Income Statistics Widget */}
-        <div className="mt-3 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/20 rounded-xl p-3 shadow-lg">
-          <h3 className="text-sm font-semibold text-white mb-2">Income statistics</h3>
-          <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Today:</span>
-              <span className="font-semibold text-white">
-                {statsLoading ? "..." : stats?.todayEarnings || "0.00"}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">All time:</span>
-              <span className="font-semibold text-white">
-                {statsLoading ? "..." : Math.round(parseFloat((user as User)?.balance || "0") * 500000)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">On referrals:</span>
-              <span className="font-semibold text-white">
-                {statsLoading ? "..." : stats?.referralEarnings || "0.00"}
-              </span>
-            </div>
-          </div>
-          
-          <div className="mt-3 pt-3 border-t border-purple-500/20">
-            <div className="text-xs font-medium text-gray-300 mb-1.5">Today's activity:</div>
-            <div className="flex justify-between text-sm">
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">Tasks</span>
-                <span className="font-semibold text-white">
-                  {tasksData?.tasks?.filter((t: any) => t.claimed)?.length ?? 0}
-                </span>
+        {/* Balance Card with Today's Activity */}
+        {(user as User) && (
+          <div className="mt-3 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/20 rounded-xl p-3 shadow-lg">
+            {/* Balance Section */}
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-2">
+                {/* User Info - Top Left */}
+                <div>
+                  <div className="text-white font-medium text-sm">@{(user as User)?.username || (user as User)?.telegram_id}</div>
+                  <div className="text-gray-400 text-xs">UID: {(user as User)?.referralCode}</div>
+                </div>
+                
+                {/* Admin Dashboard Button - Top Right */}
+                {isAdmin && (
+                  <Link href="/admin">
+                    <Button variant="secondary" size="sm" className="gap-2 h-8">
+                      <i className="fas fa-cog text-xs"></i>
+                      <span className="text-xs">Dashboard</span>
+                    </Button>
+                  </Link>
+                )}
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">Ads</span>
-                <span className="font-semibold text-white">
-                  {tasksData?.adsWatchedToday ?? 0}/{appSettings?.dailyAdLimit ?? 50}
-                </span>
+              
+              {/* Balance - Centered */}
+              <div className="text-center">
+                <div className="text-gray-400 text-xs font-medium">Balance</div>
+                <div className="text-2xl font-bold text-white">
+                  {Math.round(parseFloat((user as User)?.balance || "0") * 10000000)} MGB
+                </div>
               </div>
             </div>
+
+            {/* Today's Activity Section */}
+            <div className="pt-3 border-t border-purple-500/20">
+              <div className="text-xs font-medium text-gray-300 mb-2">Today's activity:</div>
+              <div className="flex justify-between text-sm">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-400">Tasks</span>
+                  <span className="font-semibold text-white">
+                    {tasksData?.tasks?.filter((t: any) => t.claimed)?.length ?? 0}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-400">Ads</span>
+                  <span className="font-semibold text-white">
+                    {tasksData?.adsWatchedToday ?? 0}/{appSettings?.dailyAdLimit ?? 50}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Watch Ads Section */}
         <AdWatchingSection user={user as User} />
