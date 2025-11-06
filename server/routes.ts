@@ -4770,7 +4770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (result.success) {
         const rewardAmount = result.reward;
         
-        // Add promo code reward to tonBalance (used for both task creation and withdrawals)
+        // Add promo code reward to tonBalance (for task creation only, not withdrawals)
         const tonReward = parseFloat(rewardAmount || '0');
         
         // Update tonBalance directly
@@ -4779,23 +4779,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const newTonBalance = (currentTonBalance + tonReward).toFixed(8);
         
         await db.update(users)
-          .set({ tonBalance: newTonBalance })
+          .set({ 
+            tonBalance: newTonBalance,
+            updatedAt: new Date()
+          })
           .where(eq(users.id, userId));
         
-        // Log the transaction
-        await storage.addEarning({
+        // Log the transaction for tracking (without affecting withdrawBalance)
+        await storage.logTransaction({
           userId,
           amount: rewardAmount,
+          type: 'addition',
           source: 'promo_code',
-          description: `Promo code reward: ${code} (added to TON balance)`,
+          description: `Promo code reward: ${code} (added to TON balance for task creation)`,
+          metadata: { promoCode: code, rewardType: 'TON' }
         });
         
         res.json({ 
           success: true, 
-          message: `${tonReward} TON added to your balance!`,
+          message: `${tonReward} TON added to your task creation balance!`,
           reward: tonReward,
           rewardType: 'TON',
-          showAd: false  // Don't show ad popup after promo claim to prevent navigation issues
+          showAd: true  // Show ad popup after successful promo claim
         });
       } else {
         res.status(400).json({ 
