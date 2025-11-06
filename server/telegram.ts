@@ -314,39 +314,17 @@ export function formatWelcomeMessage(telegramId?: string): { message: string; in
     return { message, inlineKeyboard };
   }
   
-  const message = `👋 Welcome to Paid Adz!
-
-🚀 You've entered the world of Paid Adz, where every ad you watch earns you PAD Tokens — your gateway to real TON rewards.
-
-⚡ Earn PAD, convert it instantly to TON anytime, or create your own paid tasks to promote anything you want!
-
-📈 Start earning and growing your balance every day — your journey begins now.`;
-
-  // Get the app URL from environment variables
-  const appUrl = process.env.RENDER_EXTERNAL_URL || "https://vuuug.onrender.com";
-
-  const inlineKeyboard = {
-    inline_keyboard: [
-      [
-        {
-          text: "🚀 Let's Go",
-          web_app: { url: appUrl }
-        }
-      ],
-      [
-        {
-          text: "🤝 Join Community",
-          url: "https://t.me/PaidADsNews"
-        }
-      ]
-    ]
-  };
-
-  return { message, inlineKeyboard };
+  // No welcome message for regular users - they will access the app directly
+  return { message: '', inlineKeyboard: null };
 }
 
 export async function sendWelcomeMessage(userId: string): Promise<boolean> {
   const { message, inlineKeyboard } = formatWelcomeMessage(userId);
+  // Don't send empty welcome messages for regular users
+  if (!message || message.trim() === '') {
+    console.log('📭 Skipping welcome message for regular user:', userId);
+    return true;
+  }
   return await sendUserTelegramNotification(userId, message, inlineKeyboard);
 }
 
