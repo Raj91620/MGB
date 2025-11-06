@@ -78,6 +78,7 @@ export default function CreateTask() {
   const [additionalClicks, setAdditionalClicks] = useState("500");
   const [isAddClicksDialogOpen, setIsAddClicksDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [showVerifyInfo, setShowVerifyInfo] = useState(false);
 
   const { data: appSettings } = useQuery<any>({
     queryKey: ['/api/app-settings'],
@@ -238,7 +239,7 @@ export default function CreateTask() {
     }
 
     if (!hasSufficientBalance) {
-      showNotification(`Insufficient ${paymentCurrency} balance`, "error");
+      showNotification("Not enough TON to create task", "error");
       return;
     }
 
@@ -256,10 +257,9 @@ export default function CreateTask() {
 
     const additionalCost = additionalCostTON;
     const balance = tonBalance;
-    const currency = "TON";
 
     if (balance < additionalCost) {
-      showNotification(`Insufficient ${currency} balance`, "error");
+      showNotification("Not enough TON to add clicks", "error");
       return;
     }
 
@@ -594,7 +594,7 @@ export default function CreateTask() {
               <Button
                 className="w-full btn-primary"
                 onClick={handleIncreaseClicks}
-                disabled={increaseClicksMutation.isPending || (isAdmin ? tonBalance < additionalCostTON : pdzBalance < additionalCostTON)}
+                disabled={increaseClicksMutation.isPending || tonBalance < additionalCostTON}
               >
                 {increaseClicksMutation.isPending ? "Processing..." : `Pay & Add`}
               </Button>
