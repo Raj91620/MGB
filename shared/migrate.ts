@@ -55,6 +55,11 @@ export async function ensureDatabaseSchema(): Promise<void> {
         flagged BOOLEAN DEFAULT false,
         flag_reason TEXT,
         banned BOOLEAN DEFAULT false,
+        banned_reason TEXT,
+        banned_at TIMESTAMP,
+        device_id TEXT,
+        device_fingerprint JSONB,
+        is_primary_account BOOLEAN DEFAULT true,
         last_login_at TIMESTAMP,
         last_login_ip TEXT,
         last_login_device TEXT,
@@ -71,6 +76,11 @@ export async function ensureDatabaseSchema(): Promise<void> {
     
     // Add missing columns to existing users table (for production databases)
     try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_reason TEXT`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS device_id TEXT`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS device_fingerprint JSONB`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_primary_account BOOLEAN DEFAULT true`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS channel_visited BOOLEAN DEFAULT false`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS app_shared BOOLEAN DEFAULT false`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS friends_invited INTEGER DEFAULT 0`);
@@ -79,14 +89,49 @@ export async function ensureDatabaseSchema(): Promise<void> {
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS ton_wallet_address TEXT`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS ton_wallet_comment TEXT`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_username_wallet TEXT`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS cwallet_id TEXT`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_updated_at TIMESTAMP`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_referral_bonus DECIMAL(12, 8) DEFAULT '0'`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS total_claimed_referral_bonus DECIMAL(12, 8) DEFAULT '0'`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS ton_balance DECIMAL(12, 8) DEFAULT '0'`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS task_share_completed_today BOOLEAN DEFAULT false`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS task_channel_completed_today BOOLEAN DEFAULT false`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS task_community_completed_today BOOLEAN DEFAULT false`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS task_checkin_completed_today BOOLEAN DEFAULT false`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pdz_balance DECIMAL(12, 8) DEFAULT '0'`);
       console.log('✅ [MIGRATION] Missing user task and wallet columns added');
     } catch (error) {
       // Columns might already exist - this is fine
       console.log('ℹ️ [MIGRATION] User task and wallet columns already exist or cannot be added');
+    }
+    
+    // Drop pdz_balance and mgb_balance columns (legacy currency columns)
+    try {
+      // Check if pdz_balance or mgb_balance exist
+      const checkResult = await db.execute(sql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' 
+        AND column_name IN ('pdz_balance', 'mgb_balance')
+      `);
+      
+      const columns = (checkResult.rows || []).map((r: any) => r.column_name);
+      
+      if (columns.includes('pdz_balance')) {
+        await db.execute(sql`ALTER TABLE users DROP COLUMN IF EXISTS pdz_balance`);
+        console.log('✅ [MIGRATION] Dropped pdz_balance column');
+      }
+      
+      if (columns.includes('mgb_balance')) {
+        await db.execute(sql`ALTER TABLE users DROP COLUMN IF EXISTS mgb_balance`);
+        console.log('✅ [MIGRATION] Dropped mgb_balance column');
+      }
+      
+      if (columns.length === 0) {
+        console.log('ℹ️ [MIGRATION] Legacy balance columns already removed');
+      }
+    } catch (error) {
+      console.log('⚠️ [MIGRATION] Could not drop legacy balance columns:', error);
     }
     
     // Ensure referral_code column exists and has proper constraints
@@ -202,6 +247,14 @@ export async function ensureDatabaseSchema(): Promise<void> {
       console.log('ℹ️ [MIGRATION] Deducted and refunded columns already exist in withdrawals table');
     }
     
+    // Add rejection_reason column for admin rejection messages
+    try {
+      await db.execute(sql`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS rejection_reason TEXT`);
+      console.log('✅ [MIGRATION] Rejection reason column added to withdrawals table');
+    } catch (error) {
+      console.log('ℹ️ [MIGRATION] Rejection reason column already exists in withdrawals table');
+    }
+    
     // Promotions table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS promotions (
@@ -276,6 +329,7 @@ export async function ensureDatabaseSchema(): Promise<void> {
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
         code VARCHAR UNIQUE NOT NULL,
         reward_amount DECIMAL(12, 2) NOT NULL,
+        reward_type VARCHAR DEFAULT 'PAD' NOT NULL,
         reward_currency VARCHAR DEFAULT 'USDT',
         usage_limit INTEGER,
         usage_count INTEGER DEFAULT 0,
@@ -286,6 +340,14 @@ export async function ensureDatabaseSchema(): Promise<void> {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    
+    // Add reward_type column to existing promo_codes table if missing
+    try {
+      await db.execute(sql`ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS reward_type VARCHAR DEFAULT 'PAD' NOT NULL`);
+      console.log('✅ [MIGRATION] Reward type column added to promo_codes table');
+    } catch (error) {
+      console.log('ℹ️ [MIGRATION] Reward type column already exists in promo_codes table');
+    }
     
     // Promo code usage tracking table
     await db.execute(sql`
@@ -317,6 +379,93 @@ export async function ensureDatabaseSchema(): Promise<void> {
         UNIQUE(user_id, task_level, reset_date)
       )
     `);
+    
+    // Admin settings table - for configurable app parameters
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS admin_settings (
+        id SERIAL PRIMARY KEY,
+        setting_key VARCHAR NOT NULL,
+        setting_value TEXT NOT NULL,
+        description TEXT,
+        updated_by VARCHAR,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // Safely add unique constraint on setting_key after removing duplicates
+    try {
+      // Remove duplicate entries, keeping the one with the highest ID (most recent)
+      await db.execute(sql`
+        DELETE FROM admin_settings a
+        USING admin_settings b
+        WHERE a.id < b.id
+        AND a.setting_key = b.setting_key
+      `);
+      
+      // Add unique constraint if it doesn't exist
+      await db.execute(sql`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint 
+            WHERE conname = 'admin_settings_setting_key_unique'
+          ) THEN
+            ALTER TABLE admin_settings ADD CONSTRAINT admin_settings_setting_key_unique UNIQUE (setting_key);
+          END IF;
+        END $$
+      `);
+      
+      console.log('✅ [MIGRATION] admin_settings unique constraint ensured');
+    } catch (error) {
+      console.log('ℹ️ [MIGRATION] admin_settings unique constraint already exists or cannot be added');
+    }
+    
+    // Initialize default admin settings if they don't exist
+    await db.execute(sql`
+      INSERT INTO admin_settings (setting_key, setting_value, description)
+      VALUES 
+        ('daily_ad_limit', '50', 'Maximum number of ads a user can watch per day'),
+        ('ad_reward_pad', '1000', 'PAD reward amount per ad watched'),
+        ('ad_reward_ton', '0.00010000', 'TON reward amount per ad watched'),
+        ('withdrawal_currency', 'TON', 'Currency used for withdrawal displays (TON or PAD)')
+      ON CONFLICT (setting_key) DO NOTHING
+    `);
+    
+    // Advertiser tasks table - CRITICAL for task creation system
+    console.log('🔄 [MIGRATION] Creating advertiser_tasks table...');
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS advertiser_tasks (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        advertiser_id VARCHAR NOT NULL REFERENCES users(id),
+        task_type VARCHAR NOT NULL,
+        title TEXT NOT NULL,
+        link TEXT NOT NULL,
+        total_clicks_required INTEGER NOT NULL,
+        current_clicks INTEGER DEFAULT 0 NOT NULL,
+        cost_per_click DECIMAL(12, 8) DEFAULT 0.0003 NOT NULL,
+        total_cost DECIMAL(12, 8) NOT NULL,
+        status VARCHAR DEFAULT 'active' NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        completed_at TIMESTAMP
+      )
+    `);
+    console.log('✅ [MIGRATION] advertiser_tasks table created');
+    
+    // Task clicks tracking table - CRITICAL for preventing duplicate clicks
+    console.log('🔄 [MIGRATION] Creating task_clicks table...');
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS task_clicks (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        task_id VARCHAR NOT NULL REFERENCES advertiser_tasks(id) ON DELETE CASCADE,
+        publisher_id VARCHAR NOT NULL REFERENCES users(id),
+        reward_amount DECIMAL(12, 8) DEFAULT 0.00002 NOT NULL,
+        clicked_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(task_id, publisher_id)
+      )
+    `);
+    console.log('✅ [MIGRATION] task_clicks table created');
     
     // Promotion claims table
     await db.execute(sql`
