@@ -180,12 +180,9 @@ export default function Home() {
         </Card>
 
         {/* Developer Section */}
-        <Card className="mt-3 bg-black border-gray-800 rounded-xl">
-          <CardContent className="p-3">
+        <Card className="mt-2 bg-black border-gray-800 rounded-lg">
+          <CardContent className="p-2">
             <div className="text-center">
-              <h3 className="text-sm font-semibold text-white mb-2">
-                Developer
-              </h3>
               <Button
                 onClick={() => {
                   if (window.Telegram?.WebApp?.openTelegramLink) {
@@ -194,10 +191,10 @@ export default function Home() {
                     window.open('https://t.me/szxzyz', '_blank');
                   }
                 }}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white rounded-lg border border-gray-700"
+                className="w-full bg-gray-900 hover:bg-gray-800 text-white text-xs rounded-lg border border-gray-700 py-2"
               >
-                <i className="fas fa-user mr-2"></i>
-                Contact
+                <i className="fas fa-user mr-1 text-xs"></i>
+                Developer
               </Button>
             </div>
           </CardContent>
