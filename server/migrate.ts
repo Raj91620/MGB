@@ -105,6 +105,35 @@ export async function ensureDatabaseSchema(): Promise<void> {
       console.log('ℹ️ [MIGRATION] User task and wallet columns already exist or cannot be added');
     }
     
+    // Drop pdz_balance and mgb_balance columns (legacy currency columns)
+    try {
+      // Check if pdz_balance or mgb_balance exist
+      const checkResult = await db.execute(sql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' 
+        AND column_name IN ('pdz_balance', 'mgb_balance')
+      `);
+      
+      const columns = (checkResult.rows || []).map((r: any) => r.column_name);
+      
+      if (columns.includes('pdz_balance')) {
+        await db.execute(sql`ALTER TABLE users DROP COLUMN IF EXISTS pdz_balance`);
+        console.log('✅ [MIGRATION] Dropped pdz_balance column');
+      }
+      
+      if (columns.includes('mgb_balance')) {
+        await db.execute(sql`ALTER TABLE users DROP COLUMN IF EXISTS mgb_balance`);
+        console.log('✅ [MIGRATION] Dropped mgb_balance column');
+      }
+      
+      if (columns.length === 0) {
+        console.log('ℹ️ [MIGRATION] Legacy balance columns already removed');
+      }
+    } catch (error) {
+      console.log('⚠️ [MIGRATION] Could not drop legacy balance columns:', error);
+    }
+    
     // Ensure referral_code column exists and has proper constraints
     try {
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT`);

@@ -580,13 +580,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      console.log(`🔄 Balance refresh for user ${userId}: PAD=${user.balance}, TON=${user.tonBalance}`);
+      console.log(`🔄 Balance refresh for user ${userId}: MGB=${user.balance}, TON=${user.tonBalance}`);
       
       res.json({
         success: true,
         balance: user.balance,
         tonBalance: user.tonBalance,
-        padBalance: user.balance
+        mgbBalance: user.balance
       });
     } catch (error) {
       console.error("Error refreshing balance:", error);
@@ -618,26 +618,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const minimumConvert = parseFloat(getSetting('minimum_convert', '0.01'));
       const withdrawalCurrency = getSetting('withdrawal_currency', 'TON');
       
-      // Convert TON values to PAD where needed (multiply by 10,000,000)
-      const rewardPerAdPAD = rewardPerAd;
-      const taskRewardPAD = Math.round(taskRewardPerClick * 10000000);
-      const minimumConvertPAD = Math.round(minimumConvert * 10000000);
-      const walletChangeFeePAD = Math.round(walletChangeFeeTON * 10000000);
+      // Convert TON values to MGB where needed (multiply by 5,000,000)
+      const rewardPerAdMGB = rewardPerAd;
+      const taskRewardMGB = Math.round(taskRewardPerClick * 5000000);
+      const minimumConvertMGB = Math.round(minimumConvert * 5000000);
+      const walletChangeFeeMGB = Math.round(walletChangeFeeTON * 5000000);
       
       res.json({
         dailyAdLimit,
         rewardPerAd,
-        rewardPerAdPAD,
+        rewardPerAdMGB,
         seasonBroadcastActive,
         affiliateCommission,
         affiliateCommissionPercent: affiliateCommission,
-        walletChangeFee: walletChangeFeePAD,
+        walletChangeFee: walletChangeFeeMGB,
         minimumWithdrawal,
         taskCostPerClick,
         taskRewardPerClick,
-        taskRewardPAD,
+        taskRewardMGB,
         minimumConvert,
-        minimumConvertPAD,
+        minimumConvertMGB,
         withdrawalCurrency
       });
     } catch (error) {
@@ -662,7 +662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rewardPerAdSetting = await db.select().from(adminSettings).where(eq(adminSettings.settingKey, 'reward_per_ad')).limit(1);
       
       const dailyAdLimit = dailyAdLimitSetting[0]?.settingValue ? parseInt(dailyAdLimitSetting[0].settingValue) : 50;
-      const rewardPerAdPAD = rewardPerAdSetting[0]?.settingValue ? parseInt(rewardPerAdSetting[0].settingValue) : 1000;
+      const rewardPerAdMGB = rewardPerAdSetting[0]?.settingValue ? parseInt(rewardPerAdSetting[0].settingValue) : 1000;
       
       // Enforce daily ad limit (configurable, default 50)
       const adsWatchedToday = user.adsWatchedToday || 0;
@@ -674,9 +674,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Calculate reward in TON from PAD amount (1000 PAD = 0.0001 TON)
-      const adRewardTON = (rewardPerAdPAD / 10000000).toFixed(8);
-      const adRewardPAD = rewardPerAdPAD;
+      // Calculate reward in TON from MGB amount (5,000,000 MGB = 1 TON)
+      const adRewardTON = (rewardPerAdMGB / 5000000).toFixed(8);
+      const adRewardMGB = rewardPerAdMGB;
       
       try {
         // Process reward with error handling to ensure success response
@@ -745,7 +745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // ALWAYS return success response to ensure reward notification shows
       res.json({ 
         success: true, 
-        rewardPAD: adRewardPAD,
+        rewardMGB: adRewardMGB,
         earning: { amount: adRewardTON },
         newBalance: updatedUser?.balance || user.balance || "0",
         adsWatchedToday: newAdsWatchedToday,
@@ -759,10 +759,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return success anyway to prevent error notification from showing
       // The user watched the ad, so we should acknowledge it
       const fallbackRewardTON = "0.00010000";
-      const adRewardPAD = Math.round(parseFloat(fallbackRewardTON) * 10000000);
+      const adRewardMGB = Math.round(parseFloat(fallbackRewardTON) * 5000000);
       res.json({ 
         success: true, 
-        rewardPAD: adRewardPAD,
+        rewardMGB: adRewardMGB,
         earning: { amount: fallbackRewardTON },
         newBalance: "0",
         adsWatchedToday: 0,
@@ -1313,7 +1313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Reward: 0.0001 TON = 1,000 PAD
+      // Reward: 0.0001 TON = 500 MGB
       const rewardAmount = '0.0001';
       
       await db.transaction(async (tx) => {
@@ -1371,7 +1371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Reward: 0.0001 TON = 1,000 PAD
+      // Reward: 0.0001 TON = 500 MGB
       const rewardAmount = '0.0001';
       
       await db.transaction(async (tx) => {
@@ -1427,7 +1427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Reward: 0.0001 TON = 1,000 PAD
+      // Reward: 0.0001 TON = 500 MGB
       const rewardAmount = '0.0001';
       
       await db.transaction(async (tx) => {
@@ -3216,11 +3216,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const costPerClick = taskCostSetting[0]?.settingValue || "0.0003";
       const totalCost = (parseFloat(costPerClick) * totalClicksRequired).toFixed(8);
 
-      // Get user data to check if admin
+      // Get user data to check TON balance
       const [user] = await db
         .select({ 
           tonBalance: users.tonBalance, 
-          pdzBalance: users.pdzBalance, 
           telegram_id: users.telegram_id 
         })
         .from(users)
@@ -3233,74 +3232,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const isAdmin = user.telegram_id === process.env.TELEGRAM_ADMIN_ID;
       const requiredAmount = parseFloat(totalCost);
+      const currentTonBalance = parseFloat(user.tonBalance || '0');
 
-      // Admin users: use TON balance (existing behavior)
-      // Regular users: use PDZ tokens
-      if (isAdmin) {
-        console.log('🔑 Admin task creation - using TON balance');
-        const currentTonBalance = parseFloat(user.tonBalance || '0');
+      console.log('💰 Task creation payment check (TON):', { currentTonBalance, requiredAmount, sufficient: currentTonBalance >= requiredAmount });
 
-        console.log('💰 Payment check (TON):', { currentTonBalance, requiredAmount, sufficient: currentTonBalance >= requiredAmount });
-
-        // Check if user has sufficient TON balance
-        if (currentTonBalance < requiredAmount) {
-          return res.status(400).json({
-            success: false,
-            message: "Insufficient TON balance. Please convert PAD to TON before creating a task."
-          });
-        }
-
-        // Deduct TON balance
-        const newTonBalance = (currentTonBalance - requiredAmount).toFixed(8);
-        await db
-          .update(users)
-          .set({ tonBalance: newTonBalance })
-          .where(eq(users.id, userId));
-
-        console.log('✅ Payment deducted (TON):', { oldBalance: currentTonBalance, newBalance: newTonBalance, deducted: totalCost });
-
-        // Log transaction
-        await storage.logTransaction({
-          userId,
-          amount: totalCost,
-          type: "deduction",
-          source: "task_creation",
-          description: `Created ${taskType} task: ${title}`,
-          metadata: { taskId: null, taskType, totalClicksRequired, paymentMethod: 'TON' }
+      // Check if user has sufficient TON balance
+      if (currentTonBalance < requiredAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `You need at least ${requiredAmount.toFixed(4)} TON to create this task.`
         });
-      } else {
-        console.log('👤 Regular user task creation - using PDZ balance');
-        const currentPDZBalance = parseFloat(user.pdzBalance || '0');
-
-        console.log('💰 Payment check (PDZ):', { currentPDZBalance, requiredAmount, sufficient: currentPDZBalance >= requiredAmount });
-
-        // Check if user has sufficient PDZ balance
-        if (currentPDZBalance < requiredAmount) {
-          return res.status(400).json({
-            success: false,
-            message: "Insufficient PDZ. You need PDZ tokens to create tasks."
-          });
-        }
-
-        // Deduct PDZ balance
-        const deductResult = await storage.deductPDZBalance(
-          userId, 
-          totalCost, 
-          'task_creation', 
-          `Created ${taskType} task: ${title}`
-        );
-
-        if (!deductResult.success) {
-          return res.status(400).json({
-            success: false,
-            message: deductResult.message
-          });
-        }
-
-        console.log('✅ Payment deducted (PDZ):', { oldBalance: currentPDZBalance, deducted: totalCost });
       }
+
+      // Deduct TON balance
+      const newTonBalance = (currentTonBalance - requiredAmount).toFixed(8);
+      await db
+        .update(users)
+        .set({ tonBalance: newTonBalance })
+        .where(eq(users.id, userId));
+
+      console.log('✅ Payment deducted (TON):', { oldBalance: currentTonBalance, newBalance: newTonBalance, deducted: totalCost });
+
+      // Log transaction
+      await storage.logTransaction({
+        userId,
+        amount: totalCost,
+        type: "deduction",
+        source: "task_creation",
+        description: `Created ${taskType} task: ${title}`,
+        metadata: { taskId: null, taskType, totalClicksRequired, paymentMethod: 'TON' }
+      });
 
       // Create the task
       const task = await storage.createTask({
@@ -3393,11 +3355,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const costPerClick = taskCostSetting[0]?.settingValue || "0.0003";
       const additionalCost = (parseFloat(costPerClick) * additionalClicks).toFixed(8);
 
-      // Get user data to check if admin
+      // Get user data to check TON balance
       const [user] = await db
         .select({ 
           tonBalance: users.tonBalance, 
-          pdzBalance: users.pdzBalance, 
           telegram_id: users.telegram_id 
         })
         .from(users)
@@ -3410,60 +3371,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const isAdmin = user.telegram_id === process.env.TELEGRAM_ADMIN_ID;
       const requiredAmount = parseFloat(additionalCost);
+      const currentTonBalance = parseFloat(user.tonBalance || '0');
 
-      // Admin users: use TON balance
-      // Regular users: use PDZ tokens
-      if (isAdmin) {
-        console.log('🔑 Admin adding clicks - using TON balance');
-        const currentTonBalance = parseFloat(user.tonBalance || '0');
+      console.log('💰 Adding clicks payment check (TON):', { currentTonBalance, requiredAmount, sufficient: currentTonBalance >= requiredAmount });
 
-        // Check if user has sufficient TON balance
-        if (currentTonBalance < requiredAmount) {
-          return res.status(400).json({
-            success: false,
-            message: "Insufficient TON balance. Please convert PAD to TON before adding more clicks."
-          });
-        }
-
-        // Deduct TON balance
-        const newTonBalance = (currentTonBalance - requiredAmount).toFixed(8);
-        await db
-          .update(users)
-          .set({ tonBalance: newTonBalance })
-          .where(eq(users.id, userId));
-
-        console.log('✅ Payment deducted (TON):', { oldBalance: currentTonBalance, newBalance: newTonBalance, deducted: additionalCost });
-      } else {
-        console.log('👤 Regular user adding clicks - using PDZ balance');
-        const currentPDZBalance = parseFloat(user.pdzBalance || '0');
-
-        // Check if user has sufficient PDZ balance
-        if (currentPDZBalance < requiredAmount) {
-          return res.status(400).json({
-            success: false,
-            message: "Insufficient PDZ. You need PDZ tokens to add more clicks."
-          });
-        }
-
-        // Deduct PDZ balance
-        const deductResult = await storage.deductPDZBalance(
-          userId, 
-          additionalCost, 
-          'task_limit_increase', 
-          `Increased limit for task: ${task.title}`
-        );
-
-        if (!deductResult.success) {
-          return res.status(400).json({
-            success: false,
-            message: deductResult.message
-          });
-        }
-
-        console.log('✅ Payment deducted (PDZ):', { oldBalance: currentPDZBalance, deducted: additionalCost });
+      // Check if user has sufficient TON balance
+      if (currentTonBalance < requiredAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `You need at least ${requiredAmount.toFixed(4)} TON to add more clicks.`
+        });
       }
+
+      // Deduct TON balance
+      const newTonBalance = (currentTonBalance - requiredAmount).toFixed(8);
+      await db
+        .update(users)
+        .set({ tonBalance: newTonBalance })
+        .where(eq(users.id, userId));
+
+      console.log('✅ Payment deducted (TON):', { oldBalance: currentTonBalance, newBalance: newTonBalance, deducted: additionalCost });
 
       // Increase task limit
       const updatedTask = await storage.increaseTaskLimit(taskId, additionalClicks, additionalCost);
@@ -3568,34 +3496,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const [user] = await tx
             .select({ 
               tonBalance: users.tonBalance, 
-              pdzBalance: users.pdzBalance,
               telegram_id: users.telegram_id 
             })
             .from(users)
             .where(eq(users.id, userId));
 
           if (user) {
-            const isAdmin = user.telegram_id === process.env.TELEGRAM_ADMIN_ID;
+            // Refund to TON balance for all users
+            const newBalance = (parseFloat(user.tonBalance || '0') + parseFloat(refundAmount)).toFixed(8);
+            await tx
+              .update(users)
+              .set({ tonBalance: newBalance })
+              .where(eq(users.id, userId));
 
-            if (isAdmin) {
-              // Admin: Refund to TON balance
-              const newBalance = (parseFloat(user.tonBalance || '0') + parseFloat(refundAmount)).toFixed(8);
-              await tx
-                .update(users)
-                .set({ tonBalance: newBalance })
-                .where(eq(users.id, userId));
-
-              console.log('✅ Admin refund processed (TON):', { oldBalance: user.tonBalance, refundAmount, newBalance });
-            } else {
-              // Non-admin: Refund to PDZ balance
-              const newPDZBalance = (parseFloat(user.pdzBalance || '0') + parseFloat(refundAmount)).toFixed(8);
-              await tx
-                .update(users)
-                .set({ pdzBalance: newPDZBalance })
-                .where(eq(users.id, userId));
-
-              console.log('✅ User refund processed (PDZ):', { oldBalance: user.pdzBalance, refundAmount, newBalance: newPDZBalance });
-            }
+            console.log('✅ Refund processed (TON):', { oldBalance: user.tonBalance, refundAmount, newBalance });
 
             // Log transaction
             await storage.logTransaction({
@@ -3603,8 +3517,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               amount: refundAmount,
               type: "credit",
               source: "task_deletion_refund",
-              description: `Refund for deleting task: ${task.title} (${isAdmin ? 'TON' : 'PDZ'})`,
-              metadata: { taskId, remainingClicks, currency: isAdmin ? 'TON' : 'PDZ' }
+              description: `Refund for deleting task: ${task.title} (TON)`,
+              metadata: { taskId, remainingClicks, currency: 'TON' }
             });
           }
         }
