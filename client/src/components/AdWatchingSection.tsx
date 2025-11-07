@@ -8,7 +8,7 @@ import { MGB_TO_TON } from "@shared/constants";
 
 declare global {
   interface Window {
-    show_9368336: (type?: string | { type: string; inAppSettings: any }) => Promise<void>;
+    show_10157022: (type?: string | { type: string; inAppSettings: any }) => Promise<void>;
   }
 }
 
