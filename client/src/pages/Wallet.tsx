@@ -446,7 +446,7 @@ export default function Wallet() {
             <Card className="neon-glow-border shadow-lg">
               <CardHeader className="py-3">
                 <CardTitle className="text-base font-medium">Withdraw funds</CardTitle>
-                <CardDescription className="text-xs">Enter amount to withdraw to your MGB wallet</CardDescription>
+                <CardDescription className="text-xs">Minimum 500,000 MGB = 0.1 TON<br />5,000,000 MGB = 1 TON</CardDescription>
               </CardHeader>
               
               <CardContent className="p-4 pt-2">
@@ -480,7 +480,7 @@ export default function Wallet() {
                     
                     {/* Balance preview */}
                     <div className="text-xs text-muted-foreground space-y-1">
-                      <div>Balance: {Math.round(parseFloat(user?.balance || "0") * MGB_TO_TON)} MGB</div>
+                      <div>Available Balance: {Math.round(parseFloat(user?.balance || "0") * MGB_TO_TON)} MGB</div>
                     </div>
                   </div>
 
