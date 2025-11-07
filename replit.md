@@ -4,7 +4,23 @@ CashWatch is a React-based web application designed for users to earn cryptocurr
 
 # Recent Changes (November 7, 2025)
 
-## Final Channel Verification Cleanup (November 7, 2025 - Latest)
+## Fixed Task Rewards to 200 MGB (November 7, 2025 - Latest)
+- **Removed Admin Settings Dependency for Task Rewards**:
+  - Task rewards now ALWAYS give 200 MGB per completed task (fixed constant)
+  - Removed dynamic reward calculation from admin settings
+  - Added `TASK_FIXED_REWARD_MGB = 200` constant in `server/storage.ts`
+  - Updated `getTaskConfig()` method to use fixed constant instead of fetching from admin settings
+  - Conversion: 200 MGB / 500,000 = 0.0004 TON per task
+- **All Task Levels Use Same Reward**:
+  - All 9 daily tasks (levels 1-9) reward exactly 200 MGB each
+  - Each task requires watching 20 ads
+  - Total possible daily earnings: 9 tasks × 200 MGB = 1,800 MGB
+- **Logging & Visibility**:
+  - Console logs display: "✅ Task Config: FIXED 200 MGB → 0.00040000 TON (per task completed)"
+  - Updated comments to reflect fixed reward system
+  - No admin panel settings affect task rewards anymore
+
+## Final Channel Verification Cleanup (November 7, 2025)
 - **Completed Removal of All Channel Verification Logic**:
   - Removed misleading error messages from `server/routes.ts` that referenced channel/bot verification
   - Added deprecation comments to `verifyChannelMembership` function in `server/telegram.ts` to indicate it's no longer used
