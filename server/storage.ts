@@ -40,6 +40,7 @@ import {
 import { db, pool } from "./db";
 import { eq, desc, and, gte, lt, sql } from "drizzle-orm";
 import crypto from "crypto";
+import { MGB_TO_TON } from "../shared/constants";
 
 // Payment system configuration
 export interface PaymentSystem {
@@ -2130,7 +2131,7 @@ export class DatabaseStorage implements IStorage {
 
   // ===== MGB BALANCE MANAGEMENT =====
   // Note: MGB balance uses the main `balance` field (stores TON amount, displayed as MGB)
-  // Conversion: 5,000,000 MGB = 1 TON
+  // Conversion: 500,000 MGB = 1 TON
   
   async getMGBBalance(userId: string): Promise<string> {
     try {
@@ -2221,8 +2222,8 @@ export class DatabaseStorage implements IStorage {
   private async getTaskConfig() {
     // Fetch reward from admin settings (reward_per_ad is in MGB, convert to TON)
     const rewardPerAdSetting = await db.select().from(adminSettings).where(eq(adminSettings.settingKey, 'reward_per_ad')).limit(1);
-    const rewardPerAdMGB = parseInt(rewardPerAdSetting[0]?.settingValue || '1000');
-    const rewardPerAdTON = (rewardPerAdMGB / 5000000).toFixed(8);
+    const rewardPerAdMGB = parseInt(rewardPerAdSetting[0]?.settingValue || '100');
+    const rewardPerAdTON = (rewardPerAdMGB / MGB_TO_TON).toFixed(8);
     
     // Return 9 sequential ads-based tasks with dynamic reward from admin settings
     return [

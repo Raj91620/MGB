@@ -1,6 +1,7 @@
 // Telegram Bot API integration for sending notifications
 import TelegramBot from 'node-telegram-bot-api';
 import { storage } from './storage';
+import { MGB_TO_TON } from '../shared/constants';
 
 const isAdmin = (telegramId: string): boolean => {
   const adminId = process.env.ADMIN_ID || process.env.TELEGRAM_ADMIN_ID;
@@ -461,9 +462,9 @@ export async function handleTelegramMessage(update: any): Promise<boolean> {
           // Send each withdrawal as a separate message with approve/reject buttons
           for (const { withdrawal, user } of displayWithdrawals) {
             const withdrawalDetails = withdrawal.details as any;
-            // Convert TON to MGB for display (1 TON = 5,000,000 MGB)
+            // Convert TON to MGB for display
             const amountInTON = parseFloat(withdrawal.amount);
-            const amountInMGB = Math.round(amountInTON * 5000000);
+            const amountInMGB = Math.round(amountInTON * MGB_TO_TON);
             const walletAddress = withdrawalDetails?.paymentDetails || 'N/A';
             const username = user?.username || user?.firstName || 'Unknown';
             const createdAt = new Date(withdrawal.createdAt!).toUTCString();

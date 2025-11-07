@@ -24,6 +24,7 @@ import { sendTelegramMessage, sendUserTelegramNotification, sendWelcomeMessage, 
 import { authenticateTelegram, requireAuth, optionalAuth } from "./auth";
 import { isAuthenticated } from "./replitAuth";
 import { config, getChannelConfig } from "./config";
+import { MGB_TO_TON } from "../shared/constants";
 
 // Store WebSocket connections for real-time updates
 // Map: sessionId -> { socket: WebSocket, userId: string }
@@ -608,7 +609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Parse all settings with defaults
       const dailyAdLimit = parseInt(getSetting('daily_ad_limit', '50'));
-      const rewardPerAd = parseInt(getSetting('reward_per_ad', '1000'));
+      const rewardPerAd = parseInt(getSetting('reward_per_ad', '100'));
       const seasonBroadcastActive = getSetting('season_broadcast_active', 'false') === 'true';
       const affiliateCommission = parseFloat(getSetting('affiliate_commission', '10'));
       const walletChangeFeeTON = parseFloat(getSetting('wallet_change_fee', '0.0005'));
@@ -619,11 +620,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const minimumConvert = parseFloat(getSetting('minimum_convert', '0.01'));
       const withdrawalCurrency = getSetting('withdrawal_currency', 'MGB');
       
-      // Convert TON values to MGB where needed (multiply by 5,000,000: 500,000 MGB = 0.1 TON => 1 TON = 5,000,000 MGB)
+      // Convert TON values to MGB where needed (500,000 MGB = 1 TON)
       const rewardPerAdMGB = rewardPerAd;
-      const taskRewardMGB = Math.round(taskRewardPerClick * 5000000);
-      const minimumConvertMGB = Math.round(minimumConvert * 5000000);
-      const walletChangeFeeMGB = Math.round(walletChangeFeeTON * 5000000);
+      const taskRewardMGB = Math.round(taskRewardPerClick * MGB_TO_TON);
+      const minimumConvertMGB = Math.round(minimumConvert * MGB_TO_TON);
+      const walletChangeFeeMGB = Math.round(walletChangeFeeTON * MGB_TO_TON);
       
       res.json({
         dailyAdLimit,
@@ -664,7 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rewardPerAdSetting = await db.select().from(adminSettings).where(eq(adminSettings.settingKey, 'reward_per_ad')).limit(1);
       
       const dailyAdLimit = dailyAdLimitSetting[0]?.settingValue ? parseInt(dailyAdLimitSetting[0].settingValue) : 50;
-      const rewardPerAdMGB = rewardPerAdSetting[0]?.settingValue ? parseInt(rewardPerAdSetting[0].settingValue) : 1000;
+      const rewardPerAdMGB = rewardPerAdSetting[0]?.settingValue ? parseInt(rewardPerAdSetting[0].settingValue) : 100;
       
       // Enforce daily ad limit (configurable, default 50)
       const adsWatchedToday = user.adsWatchedToday || 0;
@@ -676,8 +677,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Calculate reward in TON from MGB amount (5,000,000 MGB = 1 TON)
-      const adRewardTON = (rewardPerAdMGB / 5000000).toFixed(8);
+      // Calculate reward in TON from MGB amount
+      const adRewardTON = (rewardPerAdMGB / MGB_TO_TON).toFixed(8);
       const adRewardMGB = rewardPerAdMGB;
       
       try {
@@ -761,7 +762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return success anyway to prevent error notification from showing
       // The user watched the ad, so we should acknowledge it
       const fallbackRewardTON = "0.00010000";
-      const adRewardMGB = Math.round(parseFloat(fallbackRewardTON) * 5000000);
+      const adRewardMGB = Math.round(parseFloat(fallbackRewardTON) * MGB_TO_TON);
       res.json({ 
         success: true, 
         rewardMGB: adRewardMGB,
@@ -3680,7 +3681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentBalanceTON = parseFloat(user.balance || '0');
         // User enters amount in MGB from frontend, convert to TON for validation
         const withdrawAmountMGB = parseFloat(amount || '0');
-        const withdrawAmountTON = withdrawAmountMGB / 5000000; // Convert MGB to TON (5,000,000 MGB = 1 TON)
+        const withdrawAmountTON = withdrawAmountMGB / MGB_TO_TON; // Convert MGB to TON
         
         // Validate withdrawal amount
         if (!amount || withdrawAmountMGB <= 0) {
@@ -3698,7 +3699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return setting?.settingValue || defaultValue;
         };
         const minimumWithdrawalTON = parseFloat(getSetting('minimum_withdrawal', '0.1'));
-        const minimumWithdrawalMGB = minimumWithdrawalTON * 5000000; // Convert to MGB for display (5,000,000 MGB = 1 TON)
+        const minimumWithdrawalMGB = minimumWithdrawalTON * MGB_TO_TON; // Convert to MGB for display
         
         // Validate minimum withdrawal amount
         if (withdrawAmountTON < minimumWithdrawalTON) {
