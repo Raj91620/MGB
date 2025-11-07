@@ -2,6 +2,27 @@
 
 CashWatch is a React-based web application designed for users to earn cryptocurrency by interacting with advertisements. It offers a gamified experience, including daily streaks, a multi-level referral program, and cryptocurrency withdrawal functionalities. The platform aims to provide an engaging and user-friendly method for cryptocurrency earning, built on a modern full-stack architecture with dynamically configurable settings via an admin dashboard.
 
+# Recent Changes (November 7, 2025)
+
+## Telegram Bot Withdrawal Display Fixes (November 7, 2025)
+- **Fixed Withdrawal Double Amount Bug**: 
+  - Updated new withdrawal notification in `server/routes.ts` to display correct MGB amount instead of using undefined variable
+  - Fixed line 3863 to use `newWithdrawal.withdrawnAmountMGB.toLocaleString()` instead of `newWithdrawal.withdrawnAmount`
+- **Fixed Pending Withdrawal Display in Telegram Bot**:
+  - Updated `server/telegram.ts` to convert TON to MGB for display (lines 619-621)
+  - Changed withdrawal amount display from TON format to MGB format
+  - Now shows amounts like "500 MGB" instead of "0.0001 TON"
+- **Removed Channel Join Verification**:
+  - Disabled Telegram channel membership verification for task completion
+  - Users can now complete tasks by clicking "Check" without needing to actually join channels
+  - Updated `channel` and `daily` task types in `server/routes.ts` to auto-verify (lines 2372-2384)
+- **Simplified Telegram Bot Admin Panel**:
+  - Removed `/szxzyz` command and all detailed dashboard statistics
+  - Removed detailed stats display showing APP DASHBOARD, AD ANALYSIS, PLATFORM EARNING, etc.
+  - Admin panel now shows simple welcome message with two buttons: "🕓 Pending Withdrawal" and "📢 Advertise"
+  - Removed refresh button and all stats-related callback handlers
+  - Admins can access the panel via `/start` command
+
 # Recent Changes (November 6, 2025)
 
 ## Critical Bug Fixes (Latest - November 6, 2025)
