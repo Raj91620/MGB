@@ -42,6 +42,10 @@ import { eq, desc, and, gte, lt, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { MGB_TO_TON } from "../shared/constants";
 
+// FIXED TASK REWARD CONFIGURATION
+// Each completed task always rewards 200 MGB (removed admin settings dependency)
+export const TASK_FIXED_REWARD_MGB = 200;
+
 // Payment system configuration
 export interface PaymentSystem {
   id: string;
@@ -2218,34 +2222,15 @@ export class DatabaseStorage implements IStorage {
 
   // ===== NEW SIMPLE TASK SYSTEM =====
   
-  // Get task configuration dynamically from admin settings
+  // Get task configuration with FIXED 200 MGB reward per task
   private async getTaskConfig() {
-    // Fetch reward from admin settings (reward_per_ad is in MGB, convert to TON)
-    const rewardPerAdSetting = await db.select().from(adminSettings).where(eq(adminSettings.settingKey, 'reward_per_ad')).limit(1);
-    
-    // Safely parse the MGB reward value with validation
-    let rewardPerAdMGB = 100; // Default fallback
-    try {
-      const settingValue = rewardPerAdSetting[0]?.settingValue;
-      if (settingValue) {
-        const parsedValue = parseInt(settingValue);
-        if (!isNaN(parsedValue) && parsedValue > 0) {
-          rewardPerAdMGB = parsedValue;
-        } else {
-          console.warn('⚠️ Invalid reward_per_ad value in settings, using default:', settingValue);
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error parsing reward_per_ad setting:', error);
-    }
-    
     // Convert MGB to TON (1 TON = 500,000 MGB)
-    // Example: 200 MGB / 500,000 = 0.0004 TON
-    const rewardPerAdTON = (rewardPerAdMGB / MGB_TO_TON).toFixed(8);
+    // 200 MGB / 500,000 = 0.0004 TON
+    const rewardPerAdTON = (TASK_FIXED_REWARD_MGB / MGB_TO_TON).toFixed(8);
     
-    console.log(`✅ Task Config: ${rewardPerAdMGB} MGB → ${rewardPerAdTON} TON (per 20 ads completed)`);
+    console.log(`✅ Task Config: FIXED ${TASK_FIXED_REWARD_MGB} MGB → ${rewardPerAdTON} TON (per task completed)`);
     
-    // Return 9 sequential ads-based tasks with dynamic reward from admin settings
+    // Return 9 sequential ads-based tasks with FIXED 200 MGB reward
     return [
       { level: 1, required: 20, reward: rewardPerAdTON },
       { level: 2, required: 20, reward: rewardPerAdTON },
@@ -2279,7 +2264,7 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(dailyTasks.taskLevel);
 
-    // If no tasks exist for today, create them with dynamic reward from admin settings
+    // If no tasks exist for today, create them with FIXED 200 MGB reward
     if (existingTasks.length === 0) {
       const taskConfig = await this.getTaskConfig();
       const tasksToInsert: InsertDailyTask[] = taskConfig.map(config => ({
