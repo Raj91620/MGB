@@ -683,7 +683,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Process reward with error handling to ensure success response
-        await storage.addEarning({
+        // addEarning automatically processes referral commissions internally
+        const { earning, commissionInfo } = await storage.addEarning({
           userId,
           amount: adRewardTON,
           source: 'ad_watch',
@@ -701,19 +702,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("⚠️ Referral bonus processing failed (non-critical):", bonusError);
         }
         
-        // Process 10% referral commission for referrer (if user was referred)
-        if (user.referredBy) {
+        // Send real-time update to referrer about commission (only if commission was actually created)
+        if (commissionInfo && commissionInfo.referrerId) {
           try {
-            const referralCommissionTON = (parseFloat(adRewardTON) * 0.1).toFixed(8);
-            await storage.addEarning({
-              userId: user.referredBy,
-              amount: referralCommissionTON,
-              source: 'referral_commission',
-              description: `10% commission from ${user.username || user.telegram_id}'s ad watch`,
+            sendRealtimeUpdate(commissionInfo.referrerId, {
+              type: 'referral_commission',
+              data: {
+                amount: commissionInfo.commission,
+                pendingBonus: commissionInfo.newPending,
+                from: user.firstName || user.username || 'User'
+              }
             });
-          } catch (commissionError) {
-            // Log but don't fail the request if commission processing fails
-            console.error("⚠️ Referral commission processing failed (non-critical):", commissionError);
+            console.log(`📤 Sent referral commission update to ${commissionInfo.referrerId}: ${commissionInfo.commission} (new pending: ${commissionInfo.newPending})`);
+          } catch (updateError) {
+            // Don't fail the request if WebSocket update fails
+            console.error("⚠️ Failed to send referral commission update (non-critical):", updateError);
           }
         }
       } catch (earningError) {
@@ -944,6 +947,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error searching referral:", error);
       res.status(500).json({ message: "Failed to search referral" });
+    }
+  });
+
+  // Apply referral code endpoint - allows users to submit referral code from web app
+  app.post('/api/referrals/apply', async (req: any, res) => {
+    try {
+      const userId = req.session?.user?.user?.id || req.user?.user?.id;
+      
+      if (!userId) {
+        console.log('⚠️ Referral apply requested without session');
+        return res.status(401).json({ 
+          success: false, 
+          message: "Authentication required" 
+        });
+      }
+
+      const { referralCode } = req.body;
+
+      if (!referralCode) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Referral code is required" 
+        });
+      }
+
+      console.log(`🔄 Processing referral application: code=${referralCode}, user=${userId}`);
+
+      // Get current user
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "User not found" 
+        });
+      }
+
+      // Check if user already has a referrer
+      if (currentUser.referredBy) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "You already have a referrer. You can only use one referral code." 
+        });
+      }
+
+      // Find the referrer by referral code
+      const referrer = await storage.getUserByReferralCode(referralCode);
+      
+      if (!referrer) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Invalid referral code" 
+        });
+      }
+
+      // Prevent self-referral
+      if (referrer.id === userId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "You cannot use your own referral code" 
+        });
+      }
+
+      // Create the referral relationship
+      try {
+        await storage.createReferral(referrer.id, userId);
+        console.log(`✅ Referral applied successfully: ${referrer.id} -> ${userId}`);
+
+        // Send real-time update to referrer about new referral
+        const updatedReferrer = await storage.getUser(referrer.id);
+        if (updatedReferrer) {
+          sendRealtimeUpdate(referrer.id, {
+            type: 'referral_update',
+            data: {
+              friendsInvited: updatedReferrer.friendsInvited,
+              totalReferrals: updatedReferrer.friendsInvited,
+            }
+          });
+        }
+
+        // Send real-time update to current user
+        sendRealtimeUpdate(userId, {
+          type: 'referral_applied',
+          data: {
+            referrerName: referrer.firstName || referrer.username || 'Unknown',
+            referralCode: referralCode
+          }
+        });
+
+        res.json({ 
+          success: true, 
+          message: `Successfully linked to ${referrer.firstName || referrer.username || 'referrer'}'s network!`,
+          referrer: {
+            name: referrer.firstName || referrer.username || 'Unknown',
+            code: referralCode
+          }
+        });
+      } catch (error: any) {
+        console.error('❌ Error creating referral:', error);
+        
+        // Handle specific error messages
+        if (error.message?.includes('already exists')) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "Referral relationship already exists" 
+          });
+        } else if (error.message?.includes('same device')) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "Cannot use referral code from the same device" 
+          });
+        }
+        
+        return res.status(500).json({ 
+          success: false, 
+          message: error.message || "Failed to apply referral code" 
+        });
+      }
+    } catch (error) {
+      console.error("Error applying referral:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to apply referral code" 
+      });
     }
   });
 
@@ -1255,7 +1381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(users.id, userId));
         
         // Add earning record
-        await storage.addEarning({
+        const { earning: _earning1 } = await storage.addEarning({
           userId,
           amount: rewardAmount,
           source: 'task_share',
@@ -1311,7 +1437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .where(eq(users.id, userId));
         
-        await storage.addEarning({
+        const { earning: _earning2 } = await storage.addEarning({
           userId,
           amount: rewardAmount,
           source: 'task_channel',
@@ -1367,7 +1493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .where(eq(users.id, userId));
         
-        await storage.addEarning({
+        const { earning: _earning3 } = await storage.addEarning({
           userId,
           amount: rewardAmount,
           source: 'task_community',
@@ -4563,7 +4689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.addBalance(userId, task.rewardAmount);
         
         // Add earning record
-        await storage.addEarning({
+        const { earning: _earning4 } = await storage.addEarning({
           userId,
           amount: task.rewardAmount,
           source: 'daily_task_completion',

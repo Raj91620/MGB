@@ -69,7 +69,7 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<{ user: User; isNewUser: boolean }>;
   
   // Earnings operations
-  addEarning(earning: InsertEarning): Promise<Earning>;
+  addEarning(earning: InsertEarning): Promise<{ earning: Earning; commissionInfo: { referrerId?: string; commission?: string; newPending?: string } }>;
   getUserEarnings(userId: string, limit?: number): Promise<Earning[]>;
   getUserStats(userId: string): Promise<{
     todayEarnings: string;
@@ -463,7 +463,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Earnings operations
-  async addEarning(earning: InsertEarning): Promise<Earning> {
+  async addEarning(earning: InsertEarning): Promise<{ earning: Earning; commissionInfo: { referrerId?: string; commission?: string; newPending?: string } }> {
     const [newEarning] = await db
       .insert(earnings)
       .values(earning)
@@ -535,8 +535,9 @@ export class DatabaseStorage implements IStorage {
     
     // Process referral commission (10% of user's earnings)
     // Only process commissions for non-referral earnings to avoid recursion
+    let commissionInfo = {};
     if (earning.source !== 'referral_commission' && earning.source !== 'referral') {
-      await this.processReferralCommission(earning.userId, newEarning.id, earning.amount);
+      commissionInfo = await this.processReferralCommission(earning.userId, newEarning.id, earning.amount);
     }
     
     // Check and activate referral bonuses after ad watch (critical for referral system)
@@ -544,7 +545,7 @@ export class DatabaseStorage implements IStorage {
       await this.checkAndActivateReferralBonus(earning.userId);
     }
     
-    return newEarning;
+    return { earning: newEarning, commissionInfo };
   }
 
   async getUserEarnings(userId: string, limit: number = 20): Promise<Earning[]> {
@@ -694,7 +695,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
 
     if (parseFloat(rewardEarned) > 0) {
-      await this.addEarning({
+      const { earning: _earning } = await this.addEarning({
         userId,
         amount: rewardEarned,
         source: 'daily_streak',
@@ -1243,7 +1244,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Process referral commission (10% for direct referrals only - stored as pending)
-  async processReferralCommission(userId: string, originalEarningId: number, earningAmount: string): Promise<void> {
+  async processReferralCommission(userId: string, originalEarningId: number, earningAmount: string): Promise<{ referrerId?: string; commission?: string; newPending?: string }> {
     try {
       // Only process commissions for ad watching earnings
       const [earning] = await db
@@ -1254,7 +1255,7 @@ export class DatabaseStorage implements IStorage {
 
       if (!earning || earning.source !== 'ad_watch') {
         // Only ad earnings generate commissions
-        return;
+        return {};
       }
 
       // Find Level 1 referrer (direct referrer - must be completed referral)
@@ -1298,13 +1299,22 @@ export class DatabaseStorage implements IStorage {
           .where(eq(users.id, level1Referral.referrerId));
 
         console.log(`✅ 10% commission of ${commission} added to pending bonus for ${level1Referral.referrerId} from ${userId}'s ad earnings`);
+        
+        // Return commission info for WebSocket notification
+        return {
+          referrerId: level1Referral.referrerId,
+          commission,
+          newPending
+        };
       }
       
       // Notification disabled to prevent spam - users can claim bonuses in Affiliates page
       // Commission is tracked in pendingReferralBonus and must be manually claimed
+      return {};
     } catch (error) {
       console.error('Error processing referral commission:', error);
       // Don't throw error to avoid disrupting the main earning process
+      return {};
     }
   }
 
@@ -1347,7 +1357,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, userId));
 
       // Add earning record for claimed bonus
-      await this.addEarning({
+      const { earning: _earningClaim } = await this.addEarning({
         userId,
         amount: pendingAmount.toFixed(8),
         source: 'referral_claim',
@@ -2438,7 +2448,7 @@ export class DatabaseStorage implements IStorage {
       ));
 
     // Add reward to user balance (rewardAmount is already in TON format)
-    await this.addEarning({
+    const { earning: _earningTask } = await this.addEarning({
       userId,
       amount: rewardAmountTON,
       source: 'task_completion',
@@ -2713,7 +2723,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Add reward to publisher
-      await this.addEarning({
+      const { earning: _earningClick } = await this.addEarning({
         userId: publisherId,
         amount: rewardAmount,
         source: "task_click",
