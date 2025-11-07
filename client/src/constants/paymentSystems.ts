@@ -8,5 +8,5 @@ export interface PaymentSystem {
 }
 
 export const PAYMENT_SYSTEMS: PaymentSystem[] = [
-  { id: 'ton_coin', name: 'TON Coin', emoji: '💎', minWithdrawal: 4.0, fee: 4, feeType: 'percentage' }
+  { id: 'mgb_wallet', name: 'MGB', emoji: '💰', minWithdrawal: 500000, fee: 0, feeType: 'fixed' }
 ];
