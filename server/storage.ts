@@ -2222,8 +2222,28 @@ export class DatabaseStorage implements IStorage {
   private async getTaskConfig() {
     // Fetch reward from admin settings (reward_per_ad is in MGB, convert to TON)
     const rewardPerAdSetting = await db.select().from(adminSettings).where(eq(adminSettings.settingKey, 'reward_per_ad')).limit(1);
-    const rewardPerAdMGB = parseInt(rewardPerAdSetting[0]?.settingValue || '100');
+    
+    // Safely parse the MGB reward value with validation
+    let rewardPerAdMGB = 100; // Default fallback
+    try {
+      const settingValue = rewardPerAdSetting[0]?.settingValue;
+      if (settingValue) {
+        const parsedValue = parseInt(settingValue);
+        if (!isNaN(parsedValue) && parsedValue > 0) {
+          rewardPerAdMGB = parsedValue;
+        } else {
+          console.warn('⚠️ Invalid reward_per_ad value in settings, using default:', settingValue);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error parsing reward_per_ad setting:', error);
+    }
+    
+    // Convert MGB to TON (1 TON = 500,000 MGB)
+    // Example: 200 MGB / 500,000 = 0.0004 TON
     const rewardPerAdTON = (rewardPerAdMGB / MGB_TO_TON).toFixed(8);
+    
+    console.log(`✅ Task Config: ${rewardPerAdMGB} MGB → ${rewardPerAdTON} TON (per 20 ads completed)`);
     
     // Return 9 sequential ads-based tasks with dynamic reward from admin settings
     return [
@@ -2410,6 +2430,17 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    // Validate reward amount before processing
+    const rewardAmountTON = task.rewardAmount;
+    const rewardAmountNum = parseFloat(rewardAmountTON);
+    
+    if (isNaN(rewardAmountNum) || rewardAmountNum <= 0) {
+      console.error('❌ Invalid reward amount for task:', { taskLevel, rewardAmount: rewardAmountTON });
+      return { success: false, message: "Invalid task reward amount" };
+    }
+    
+    console.log(`💰 Claiming task ${taskLevel} reward: ${rewardAmountTON} TON (${Math.round(rewardAmountNum * MGB_TO_TON)} MGB)`);
+
     // Mark task as claimed
     await db
       .update(dailyTasks)
@@ -2424,10 +2455,10 @@ export class DatabaseStorage implements IStorage {
         eq(dailyTasks.resetDate, resetDate)
       ));
 
-    // Add reward to user balance
+    // Add reward to user balance (rewardAmount is already in TON format)
     await this.addEarning({
       userId,
-      amount: task.rewardAmount,
+      amount: rewardAmountTON,
       source: 'task_completion',
       description: `Task ${taskLevel} completed: Watch ${task.required} ads`,
     });
@@ -2435,17 +2466,19 @@ export class DatabaseStorage implements IStorage {
     // Log transaction
     await this.logTransaction({
       userId,
-      amount: task.rewardAmount,
+      amount: rewardAmountTON,
       type: 'addition',
       source: 'task_completion',
       description: `Task ${taskLevel} reward`,
-      metadata: { taskLevel, required: task.required, resetDate }
+      metadata: { taskLevel, required: task.required, resetDate, rewardMGB: Math.round(rewardAmountNum * MGB_TO_TON) }
     });
+
+    console.log(`✅ Task ${taskLevel} reward claimed successfully for user ${userId}`);
 
     return {
       success: true,
       message: "Task reward claimed successfully",
-      rewardAmount: task.rewardAmount
+      rewardAmount: rewardAmountTON
     };
   }
 
