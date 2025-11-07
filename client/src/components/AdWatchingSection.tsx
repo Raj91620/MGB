@@ -72,9 +72,9 @@ export default function AdWatchingSection({ user }: AdWatchingSectionProps) {
           return; // Block early popup
         }
         
-        if (typeof window.show_9368336 === 'function') {
+        if (typeof window.show_10157022 === 'function') {
           try {
-            window.show_9368336();
+            window.show_10157022();
           } catch (error) {
             console.log('Auto ad display:', error);
           }
@@ -97,9 +97,9 @@ export default function AdWatchingSection({ user }: AdWatchingSectionProps) {
     setIsWatching(true);
     
     try {
-      if (typeof window.show_9368336 === 'function') {
+      if (typeof window.show_10157022 === 'function') {
         // Ad opens immediately
-        await window.show_9368336();
+        await window.show_10157022();
         // Process reward after ad is shown
         watchAdMutation.mutate('rewarded');
       } else {
