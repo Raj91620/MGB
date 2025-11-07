@@ -51,6 +51,9 @@ interface TelegramMessage {
 
 // All claim state functions removed
 
+// DEPRECATED: Channel membership verification is no longer used for task completion
+// All tasks are auto-verified to allow instant rewards without requiring channel joins
+// This function is kept for reference but should not be called in production
 export async function verifyChannelMembership(userId: number, channelIdOrUsername: string, botToken: string): Promise<boolean> {
   try {
     const bot = new TelegramBot(botToken);

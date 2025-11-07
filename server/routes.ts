@@ -2361,16 +2361,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!isVerified) {
         console.log(`❌ Task verification failed for user ${userId}:`, verificationMessage);
-        let friendlyMessage = '❌ Verification failed. Please complete the required action first.';
-        if (taskType === 'channel' && channelUsername) {
-          friendlyMessage = `❌ Verification failed. Please make sure you joined the required channel @${channelUsername}.`;
-        } else if (taskType === 'bot' && botUsername) {
-          friendlyMessage = `❌ Verification failed. Please make sure you started the bot @${botUsername}.`;
-        }
         return res.status(400).json({ 
           success: false, 
-          message: verificationMessage,
-          friendlyMessage
+          message: verificationMessage
         });
       }
       
