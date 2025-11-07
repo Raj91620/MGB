@@ -50,7 +50,7 @@ export default function Affiliates() {
 
   const isLoading = userLoading || statsLoading;
 
-  const botUsername = import.meta.env.VITE_BOT_USERNAME || 'Paid_Adzbot';
+  const botUsername = import.meta.env.VITE_BOT_USERNAME || 'ManiGainBot';
   const referralLink = user?.referralCode 
     ? `https://t.me/${botUsername}?start=${user.referralCode}`
     : '';
