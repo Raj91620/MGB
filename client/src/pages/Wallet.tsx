@@ -409,9 +409,9 @@ export default function Wallet() {
                 <form onSubmit={handleSaveWallet} className="space-y-4">
                   {/* MGB Section */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Enter MGB Wallet Address</Label>
+                    <Label className="text-sm font-semibold">Enter TON Wallet Address</Label>
                     <Input
-                      placeholder="Enter MGB Wallet Address"
+                      placeholder="Enter TON Wallet Address"
                       value={walletForm.tonWalletAddress}
                       onChange={(e) => updateWalletForm('tonWalletAddress', e.target.value)}
                       required
