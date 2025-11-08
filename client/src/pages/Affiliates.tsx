@@ -214,7 +214,7 @@ export default function Affiliates() {
               <h3 className="text-base font-bold text-white mb-2">No Referrals Yet</h3>
               <p className="text-sm text-muted-foreground mb-4">Start inviting friends to build your earning team!</p>
               <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3">
-                <p className="text-xs text-emerald-300">💰 Earn 10% from every friend's ad income</p>
+                <p className="text-xs text-emerald-300">💰 Earn 20% from every friend's ad income</p>
               </div>
             </CardContent>
           </Card>
