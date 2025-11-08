@@ -287,7 +287,7 @@ export default function CreateTask() {
 
   return (
     <Layout>
-      <main ref={mainRef} className="max-w-md mx-auto px-4 mt-6">
+      <main ref={mainRef} className="max-w-md mx-auto px-4 mt-6 pb-24">
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -298,22 +298,29 @@ export default function CreateTask() {
               Promote your channel or bot
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-xs text-muted-foreground">Balance</div>
-            <div className="text-lg font-bold text-primary">
-              {tonBalance.toFixed(4)} TON
-            </div>
-          </div>
+          <Button
+            onClick={() => {
+              const telegramLink = 'https://t.me/Rajji999?text=Sir%2C%20I%20want%20to%20top%20up%20TON%20to%20create%20paid%20tasks';
+              if (window.Telegram?.WebApp?.openTelegramLink) {
+                window.Telegram.WebApp.openTelegramLink(telegramLink);
+              } else {
+                window.open(telegramLink, '_blank');
+              }
+            }}
+            className="bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/40 text-amber-300 hover:text-amber-200 transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 px-4 py-2 rounded-lg font-bold text-sm"
+          >
+            💰 {tonBalance.toFixed(4)} TON
+          </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-6">
           <Button
             type="button"
             variant="outline"
-            className={`h-auto py-3 transition-all font-bold text-sm ${
+            className={`h-auto py-4 transition-all font-bold text-sm rounded-xl ${
               activeTab === "add-task" 
-                ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500 text-cyan-300 shadow-lg shadow-cyan-500/20" 
-                : "hover:bg-cyan-500/10 hover:border-cyan-500/50 text-muted-foreground"
+                ? "bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border-cyan-400 text-cyan-300 shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/40 hover:scale-[1.02]" 
+                : "hover:bg-cyan-500/10 hover:border-cyan-500/50 text-muted-foreground hover:scale-[1.02]"
             }`}
             onClick={() => setActiveTab("add-task")}
           >
@@ -322,10 +329,10 @@ export default function CreateTask() {
           <Button
             type="button"
             variant="outline"
-            className={`h-auto py-3 transition-all font-bold text-sm ${
+            className={`h-auto py-4 transition-all font-bold text-sm rounded-xl ${
               activeTab === "my-task" 
-                ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-500 text-blue-300 shadow-lg shadow-blue-500/20" 
-                : "hover:bg-blue-500/10 hover:border-blue-500/50 text-muted-foreground"
+                ? "bg-gradient-to-r from-indigo-500/30 to-purple-500/30 border-indigo-400 text-indigo-300 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40 hover:scale-[1.02]" 
+                : "hover:bg-indigo-500/10 hover:border-indigo-500/50 text-muted-foreground hover:scale-[1.02]"
             }`}
             onClick={() => setActiveTab("my-task")}
           >
@@ -337,31 +344,31 @@ export default function CreateTask() {
           <div className="space-y-4">
             <div>
               <Label className="text-xs font-medium mb-2 block text-muted-foreground">Select Type:</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   type="button"
                   variant="outline"
-                  className={`h-auto py-2.5 flex items-center justify-center gap-2 transition-all ${
+                  className={`h-auto py-3 flex items-center justify-center gap-2 transition-all rounded-xl ${
                     taskType === "channel" 
-                      ? "bg-blue-500/20 border-blue-500 text-blue-400 hover:bg-blue-500/30" 
-                      : "hover:bg-blue-500/10 hover:border-blue-500/50"
+                      ? "bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border-blue-400 text-blue-300 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 hover:scale-[1.02]" 
+                      : "hover:bg-blue-500/10 hover:border-blue-500/50 hover:scale-[1.02]"
                   }`}
                   onClick={() => setTaskType("channel")}
                 >
-                  <Radio className="w-4 h-4" />
+                  <Radio className="w-5 h-5" />
                   <span className="font-semibold text-sm">Channel</span>
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  className={`h-auto py-2.5 flex items-center justify-center gap-2 transition-all ${
+                  className={`h-auto py-3 flex items-center justify-center gap-2 transition-all rounded-xl ${
                     taskType === "bot" 
-                      ? "bg-blue-500/20 border-blue-500 text-blue-400 hover:bg-blue-500/30" 
-                      : "hover:bg-blue-500/10 hover:border-blue-500/50"
+                      ? "bg-gradient-to-r from-purple-500/30 to-pink-500/30 border-purple-400 text-purple-300 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/40 hover:scale-[1.02]" 
+                      : "hover:bg-purple-500/10 hover:border-purple-500/50 hover:scale-[1.02]"
                   }`}
                   onClick={() => setTaskType("bot")}
                 >
-                  <BotIcon className="w-4 h-4" />
+                  <BotIcon className="w-5 h-5" />
                   <span className="font-semibold text-sm">Bot</span>
                 </Button>
               </div>
@@ -415,7 +422,7 @@ export default function CreateTask() {
 
                 <Button
                   type="submit"
-                  className="w-full btn-primary"
+                  className="w-full btn-primary bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold rounded-xl py-6 shadow-xl shadow-green-500/40 hover:shadow-green-500/60 transition-all hover:scale-[1.02]"
                   disabled={createTaskMutation.isPending || !hasSufficientBalance}
                 >
                   {createTaskMutation.isPending ? "Publishing..." : `Pay ${totalCost.toFixed(4)} ${paymentCurrency} & Publish`}

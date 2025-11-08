@@ -106,14 +106,14 @@ export default function Home() {
 
         {/* Balance Card with Today's Activity */}
         {(user as User) && (
-          <div className="mt-3 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/20 rounded-xl p-3 shadow-lg">
+          <div className="mt-3 bg-gradient-to-r from-primary to-secondary p-4 rounded-xl shadow-lg">
             {/* Balance Section */}
             <div className="mb-3">
               <div className="flex items-center justify-between mb-2">
                 {/* User Info - Top Left */}
                 <div>
                   <div className="text-white font-medium text-sm">@{(user as User)?.username || (user as User)?.telegram_id}</div>
-                  <div className="text-gray-400 text-xs">UID: {(user as User)?.referralCode}</div>
+                  <div className="text-primary-foreground/70 text-xs">UID: {(user as User)?.referralCode}</div>
                 </div>
                 
                 {/* Admin Dashboard Button - Top Right */}
@@ -129,7 +129,7 @@ export default function Home() {
               
               {/* Balance - Centered */}
               <div className="text-center">
-                <div className="text-gray-400 text-xs font-medium">Balance</div>
+                <div className="text-primary-foreground/80 text-xs font-medium">Balance</div>
                 <div className="text-2xl font-bold text-white">
                   {Math.round(parseFloat((user as User)?.balance || "0") * MGB_TO_TON)} MGB
                 </div>
@@ -137,17 +137,17 @@ export default function Home() {
             </div>
 
             {/* Today's Activity Section */}
-            <div className="pt-3 border-t border-purple-500/20">
-              <div className="text-xs font-medium text-gray-300 mb-2">Today's activity:</div>
+            <div className="pt-3 border-t border-primary-foreground/20">
+              <div className="text-xs font-medium text-primary-foreground/90 mb-2">Today's activity:</div>
               <div className="flex justify-between text-sm">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-gray-400">Tasks</span>
+                  <span className="text-primary-foreground/80">Tasks</span>
                   <span className="font-semibold text-white">
                     {tasksData?.tasks?.filter((t: any) => t.claimed)?.length ?? 0}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-gray-400">Ads</span>
+                  <span className="text-primary-foreground/80">Ads</span>
                   <span className="font-semibold text-white">
                     {tasksData?.adsWatchedToday ?? 0}/{appSettings?.dailyAdLimit ?? 50}
                   </span>
@@ -161,32 +161,36 @@ export default function Home() {
         <AdWatchingSection user={user as User} />
 
         {/* Promo Code Section */}
-        <Card className="mt-3 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-[#4cd3ff]/20 rounded-xl p-4 shadow-lg">
-          <h3 className="text-sm font-semibold text-white mb-3">🎟️ Have a Promo Code?</h3>
+        <Card className="mt-3 bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-fuchsia-900/40 border border-violet-500/30 rounded-2xl p-4 shadow-xl hover:shadow-violet-500/20 transition-all duration-300 hover:scale-[1.01] backdrop-blur-sm">
+          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <span className="text-lg">🎟️</span>
+            Have a Promo Code?
+          </h3>
           <PromoCodeInput />
         </Card>
 
         {/* Create Task Button */}
-        <Card className="mt-3 bg-gradient-to-br from-blue-900/40 to-purple-900/40 border-purple-500/30 rounded-xl shadow-lg">
+        <Card className="mt-3 bg-gradient-to-br from-cyan-900/40 via-blue-900/40 to-indigo-900/40 border-cyan-500/30 rounded-2xl shadow-xl hover:shadow-cyan-500/20 transition-all duration-300 hover:scale-[1.01] backdrop-blur-sm">
           <CardContent className="p-4">
             <div className="text-center">
-              <h3 className="text-base font-semibold text-white mb-2">
+              <h3 className="text-base font-bold text-white mb-3 flex items-center justify-center gap-2">
+                <PlusCircle className="w-5 h-5 text-cyan-400" />
                 Create Your Own Task
               </h3>
               <Button
                 onClick={() => navigate('/create-task')}
-                className="w-full bg-[#4cd3ff] hover:bg-[#6ddeff] text-black font-semibold rounded-lg transition-all active:scale-[0.97] shadow-[0_0_20px_rgba(76,211,255,0.4)]"
+                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold rounded-xl transition-all active:scale-[0.97] shadow-lg shadow-cyan-500/40 hover:shadow-cyan-500/60 py-6 text-base"
               >
                 <PlusCircle className="w-5 h-5 mr-2" />
-                Create Task
+                Create Task Now
               </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Developer Section */}
-        <Card className="mt-2 bg-black border-gray-800 rounded-lg">
-          <CardContent className="p-2">
+        <Card className="mt-3 bg-gradient-to-br from-gray-900/40 to-slate-900/40 border-gray-700/30 rounded-2xl shadow-lg backdrop-blur-sm hover:scale-[1.01] transition-all duration-300">
+          <CardContent className="p-3">
             <div className="text-center">
               <Button
                 onClick={() => {
@@ -196,9 +200,9 @@ export default function Home() {
                     window.open('https://t.me/szxzyz', '_blank');
                   }
                 }}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white text-xs rounded-lg border border-gray-700 py-2"
+                className="w-full bg-gradient-to-r from-gray-800 to-gray-700 hover:from-gray-700 hover:to-gray-600 text-white text-sm rounded-xl border border-gray-600/50 py-3 font-medium shadow-md transition-all"
               >
-                <i className="fas fa-user mr-1 text-xs"></i>
+                <i className="fas fa-user mr-2 text-sm"></i>
                 Developer
               </Button>
             </div>
