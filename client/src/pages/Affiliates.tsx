@@ -98,7 +98,7 @@ export default function Affiliates() {
             <Users className="w-8 h-8 text-emerald-400" />
             Invite Friends!
           </h1>
-          <p className="text-sm text-emerald-300/80 font-medium">Invite friends and earn 10% MGB from their ad income!</p>
+          <p className="text-sm text-emerald-300/80 font-medium">Invite friends and earn 20% MGB from their ad income!</p>
           <p className="text-xs text-muted-foreground mt-1">Build your team and grow your passive earnings</p>
         </div>
 
