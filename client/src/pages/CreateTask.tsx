@@ -309,7 +309,7 @@ export default function CreateTask() {
             }}
             className="bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/40 text-amber-300 hover:text-amber-200 transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 px-4 py-2 rounded-lg font-bold text-sm"
           >
-            💰 {tonBalance.toFixed(4)} TON
+            💰Click Add {tonBalance.toFixed(4)} TON
           </Button>
         </div>
 
