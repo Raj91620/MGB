@@ -195,9 +195,9 @@ export default function Home() {
               <Button
                 onClick={() => {
                   if (window.Telegram?.WebApp?.openTelegramLink) {
-                    window.Telegram.WebApp.openTelegramLink('https://t.me/Rajji999');
+                    window.Telegram.WebApp.openTelegramLink('https://t.me/ManiGainBox');
                   } else {
-                    window.open('https://t.me/Rajji999', '_blank');
+                    window.open('https://t.me/ManiGainBox', '_blank');
                   }
                 }}
                 className="w-full bg-gradient-to-r from-gray-800 to-gray-700 hover:from-gray-700 hover:to-gray-600 text-white text-sm rounded-xl border border-gray-600/50 py-3 font-medium shadow-md transition-all"
